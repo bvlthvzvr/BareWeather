@@ -1,0 +1,19 @@
+# KDE / Dolphin
+.directory
+
+# Editor / OS cruft
+*~
+*.swp
+*.bak
+.DS_Store
+
+# Compiled QML cache (never part of the source)
+*.qmlc
+*.jsc
+
+# Syncthing folder marker
+.stfolder/
+
+# Local-only AI assistant notes (kept out of version control)
+CLAUDE.md
+DEVELOPMENT.md

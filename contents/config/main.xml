@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kcfg xmlns="http://www.kde.org/standards/kcfg/1.0"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.kde.org/standards/kcfg/1.0
+                          http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+  <kcfgfile name=""/>
+  <group name="General">
+    <!-- No default location: a fresh install starts unconfigured (see
+         locationConfigured below) and shows a "set your location" prompt instead
+         of a stand-in city. Coordinates stay 0 and are never fetched until the
+         user sets a location, which flips locationConfigured true. -->
+    <entry name="latitude" type="Double">
+      <default>0</default>
+    </entry>
+    <entry name="longitude" type="Double">
+      <default>0</default>
+    </entry>
+    <entry name="locationName" type="String">
+      <default></default>
+    </entry>
+    <!-- JSON array of { name, lat, lon } entries -->
+    <entry name="savedLocations" type="String">
+      <default>[]</default>
+    </entry>
+    <!-- latches true the first time the user sets their own location (any
+         method); false out of the box drives the first-run "set your location"
+         hint in the popup, which hides once a real location is chosen -->
+    <entry name="locationConfigured" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="temperatureUnit" type="String">
+      <default>celsius</default>
+    </entry>
+    <!-- whether the temperature unit has been decided — by the user, or auto-picked
+         from the first location's country during setup. Gates the auto-pick so it
+         never overrides a deliberate choice. -->
+    <entry name="unitConfigured" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="dailyDays" type="Int">
+      <default>5</default>
+    </entry>
+    <!-- forecast day count for the simple (graph) layout (independent of dailyDays) -->
+    <entry name="simpleDailyDays" type="Int">
+      <default>5</default>
+    </entry>
+    <!-- simple-layout graph sampling: true = every hour, false = every 2 hours -->
+    <entry name="simpleHourly" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- up to 4 metrics shown in the DETAILED layout header next to the temperature -->
+    <entry name="headerMetric1" type="String"><default>feelsLike</default></entry>
+    <entry name="headerMetric2" type="String"><default>humidity</default></entry>
+    <entry name="headerMetric3" type="String"><default>uv</default></entry>
+    <entry name="headerMetric4" type="String"><default>none</default></entry>
+    <!-- independent header metrics for the SIMPLE layout -->
+    <entry name="simpleHeaderMetric1" type="String"><default>feelsLike</default></entry>
+    <entry name="simpleHeaderMetric2" type="String"><default>humidity</default></entry>
+    <entry name="simpleHeaderMetric3" type="String"><default>uv</default></entry>
+    <entry name="simpleHeaderMetric4" type="String"><default>none</default></entry>
+    <entry name="hourlyMetric1" type="String"><default>wind</default></entry>
+    <entry name="hourlyMetric2" type="String"><default>precip</default></entry>
+    <!-- per-slot fallback shown when the primary readout has no value for an
+         hour (e.g. snow on a dry hour falls back to precip chance) -->
+    <entry name="hourlyMetric1Fallback" type="String"><default>none</default></entry>
+    <entry name="hourlyMetric2Fallback" type="String"><default>none</default></entry>
+    <!-- hour a non-today day opens at in the Detailed hourly timeline:
+         6 = 6 AM (skip the overnight cards), 0 = midnight. Today always opens
+         at the current hour regardless. -->
+    <entry name="detailDayStartHour" type="Int"><default>6</default></entry>
+    <entry name="refreshInterval" type="Int">
+      <default>15</default>
+    </entry>
+    <!-- show official severe-weather alerts (worldwide, via the KDE FOSS Public
+         Alert Server at alerts.kde.org); off by default so the widget makes no
+         alert request unless the user opts in -->
+    <entry name="showAlerts" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- minimum alert severity to display (CAP rank): 1 Minor, 2 Moderate,
+         3 Severe, 4 Extreme. Default 2 = Moderate+ (Minor/Unknown filtered) -->
+    <entry name="minAlertSeverity" type="Int">
+      <default>2</default>
+    </entry>
+    <entry name="keepOpen" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="heroIconSize" type="Int">
+      <default>88</default>
+    </entry>
+    <entry name="tempFontSize" type="Int">
+      <default>88</default>
+    </entry>
+    <entry name="dailyIconSize" type="Int">
+      <default>36</default>
+    </entry>
+    <entry name="hourlyIconSize" type="Int">
+      <default>38</default>
+    </entry>
+    <entry name="hourlyInfoFontSize" type="Int">
+      <default>11</default>
+    </entry>
+    <!-- Detailed hourly-card element font (time + per-hour readouts/glyphs) -->
+    <entry name="hourlyCardFontSize" type="Int">
+      <default>13</default>
+    </entry>
+    <entry name="hourlyTempFontSize" type="Int">
+      <default>15</default>
+    </entry>
+    <!-- font for the detailed-layout condition text + location name -->
+    <entry name="conditionFontSize" type="Int">
+      <default>28</default>
+    </entry>
+    <!-- which popup layout to open with: false = Detailed (cards), true = Simple
+         (graph). Defaults to the card layout. -->
+    <entry name="simpleLayout" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- Per-layout remembered popup size (0 = use the view's implicit size).
+         main.qml drives the popup window directly (Window.window) to restore the
+         active layout's size on open / layout switch and capture user drags here;
+         see the per-layout popup-size note in DEVELOPMENT.md for why. -->
+    <entry name="detailPopupWidth" type="Int">
+      <default>0</default>
+    </entry>
+    <entry name="detailPopupHeight" type="Int">
+      <default>0</default>
+    </entry>
+    <entry name="simplePopupWidth" type="Int">
+      <default>0</default>
+    </entry>
+    <entry name="simplePopupHeight" type="Int">
+      <default>0</default>
+    </entry>
+    <!-- Latches true when the user manually resizes the Simple popup's WIDTH, so
+         auto-fit-to-day-tabs stops overriding their size. Cleared when the day
+         count changes (an explicit re-fit gesture). -->
+    <entry name="simplePopupManual" type="Bool">
+      <default>false</default>
+    </entry>
+    <entry name="simpleHourlyIconSize" type="Int">
+      <default>34</default>
+    </entry>
+    <entry name="simpleAnimatedIcons" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- animate the header (hero) icon in the simple layout -->
+    <entry name="simpleHeaderAnim" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="simpleHeroIconSize" type="Int">
+      <default>86</default>
+    </entry>
+    <entry name="simpleTempFontSize" type="Int">
+      <default>86</default>
+    </entry>
+    <!-- font for the header-info metric lines shown next to the temperature -->
+    <entry name="headerInfoFontSize" type="Int">
+      <default>12</default>
+    </entry>
+    <entry name="simpleHeaderInfoFontSize" type="Int">
+      <default>12</default>
+    </entry>
+    <!-- Simple-layout graph hour-axis label font (the "6 PM 7 PM …" row) -->
+    <entry name="simpleHourFontSize" type="Int">
+      <default>13</default>
+    </entry>
+    <!-- Simple-layout graph per-point temperature label font (the "41° 40° …") -->
+    <entry name="simpleGraphTempFontSize" type="Int">
+      <default>16</default>
+    </entry>
+    <!-- Simple-layout graph colouring: 0 = temp+precip, 1 = temp only,
+         2 = precip only, 3 = none (flat neutral) -->
+    <entry name="graphColorMode" type="Int">
+      <default>2</default>
+    </entry>
+    <entry name="animatedDailyIcons" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="animatedHourlyIcons" type="Bool">
+      <default>true</default>
+    </entry>
+    <entry name="panelIconPercent" type="Int">
+      <default>130</default>
+    </entry>
+    <entry name="panelFontPercent" type="Int">
+      <default>48</default>
+    </entry>
+    <!-- use the colored icon variant in the panel instead of the white one -->
+    <entry name="panelColorIcon" type="Bool">
+      <default>false</default>
+    </entry>
+    <!-- condition-icon pack: "basmilius" (bundled SVG), "system" (theme weather-* icons), or "custom" -->
+    <entry name="iconPack" type="String">
+      <default>basmilius</default>
+    </entry>
+    <!-- folder of the user's own icons when iconPack = "custom" (a file:// URL) -->
+    <entry name="customIconDir" type="String">
+      <default></default>
+    </entry>
+  </group>
+</kcfg>

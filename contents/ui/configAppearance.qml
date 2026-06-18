@@ -1,0 +1,628 @@
+/*
+ * Appearance settings — a shared icon-pack picker above per-layout tabs
+ * (Detailed / Simple / Panel), each holding only that layout's own settings.
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ */
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
+import QtQuick.Dialogs
+import org.kde.kirigami as Kirigami
+
+Item {
+    id: page
+
+    // cfg_* are auto-bound to the config keys by Plasma. ids live anywhere in
+    // this file (file-wide scope), so the controls can sit inside the tabs while
+    // their aliases stay here at the page root.
+
+    // shared
+    property string cfg_iconPack
+    property string cfg_customIconDir
+    // Detailed layout (forecast days moved here from the General page)
+    property alias cfg_dailyDays:          dailyDaysSpin.value
+    property alias cfg_heroIconSize:       heroSpin.value
+    property alias cfg_tempFontSize:       tempSpin.value
+    property alias cfg_dailyIconSize:      dailySpin.value
+    property alias cfg_hourlyIconSize:     hourlySpin.value
+    property alias cfg_hourlyTempFontSize: hourlyTempSpin.value
+    property alias cfg_hourlyCardFontSize: hourlyCardSpin.value
+    property alias cfg_conditionFontSize:  condFontSpin.value
+    property bool  cfg_animatedDailyIcons
+    property bool  cfg_animatedHourlyIcons
+    property string cfg_headerMetric1
+    property string cfg_headerMetric2
+    property string cfg_headerMetric3
+    property string cfg_headerMetric4
+    property alias  cfg_headerInfoFontSize: detHeaderFontSpin.value
+    // Simple layout (forecast days + graph detail moved here from General)
+    property alias cfg_simpleDailyDays:        simpleDaysSpin.value
+    property bool  cfg_simpleHourly
+    property alias cfg_simpleHeroIconSize:     simpleHeroSpin.value
+    property alias cfg_simpleTempFontSize:     simpleTempSpin.value
+    property alias cfg_simpleHourlyIconSize:   simpleIconSpin.value
+    property alias cfg_simpleHourFontSize:     simpleHourSpin.value
+    property alias cfg_simpleGraphTempFontSize: simpleGraphTempSpin.value
+    property bool  cfg_simpleAnimatedIcons
+    property bool  cfg_simpleHeaderAnim
+    property alias cfg_graphColorMode:         graphColorCombo.currentIndex
+    property string cfg_simpleHeaderMetric1
+    property string cfg_simpleHeaderMetric2
+    property string cfg_simpleHeaderMetric3
+    property string cfg_simpleHeaderMetric4
+    property alias  cfg_simpleHeaderInfoFontSize: simpHeaderFontSpin.value
+    property string cfg_hourlyMetric1
+    property string cfg_hourlyMetric2
+    property string cfg_hourlyMetric1Fallback
+    property string cfg_hourlyMetric2Fallback
+    property int    cfg_detailDayStartHour
+    // Panel (compact view)
+    property alias cfg_panelIconPercent:   panelIconSpin.value
+    property alias cfg_panelFontPercent:   panelFontSpin.value
+    property alias cfg_panelColorIcon:     panelColorCheck.checked
+
+    // ── combo popup sizing ──────────────────────────────────────────────
+    // qqc2-desktop-style sizes a ComboBox popup to the (narrow) FIELD width, so
+    // long options elide in the list. Each combo widens its OWN popup with
+    //   popup.width: longestText(model, textRole).length * charPx + padding
+    // Two earlier attempts failed: a popup.width that read+wrote a shared
+    // TextMetrics looped and crashed plasmashell; and a per-combo TextMetrics
+    // assigned to a property couldn't see the combo's `model` (a property-value
+    // object's binding scope is the TextMetrics, not the ComboBox). The
+    // popup.width binding itself DOES run in the ComboBox scope, so `model`
+    // resolves there — we just estimate the width from one calibrated average
+    // character width (pure arithmetic → no measuring loop).
+    TextMetrics { id: charMetrics; text: "Temperature & precipitation" }
+    readonly property real charPx: charMetrics.width / charMetrics.text.length
+    function longestText(items, role) {
+        var s = "";
+        for (var i = 0; i < items.length; ++i) {
+            var t = "" + (role ? items[i][role] : items[i]);
+            if (t.length > s.length) s = t;
+        }
+        return s;
+    }
+
+    // shared options for the header-metric dropdowns (id ↔ label)
+    readonly property var metricOptions: [
+        { text: i18n("None"),                    id: "none"       },
+        { text: i18n("Feels like"),              id: "feelsLike"  },
+        { text: i18n("Humidity"),                id: "humidity"   },
+        { text: i18n("UV Index"),                id: "uv"         },
+        { text: i18n("Precipitation rate"),      id: "precipRate" },
+        { text: i18n("Precipitation sum"),       id: "precipSum"  },
+        { text: i18n("Wind"),                    id: "wind"       },
+        { text: i18n("Snowfall today"),          id: "snowSum"    }
+    ]
+    function metricIndexOf(id) {
+        for (var i = 0; i < metricOptions.length; ++i)
+            if (metricOptions[i].id === id) return i;
+        return 0;
+    }
+    // Detailed layout additionally offers sunrise/sunset; the Simple header keeps the
+    // base set, so these stay Detailed-only (its combos still use metricOptions).
+    readonly property var detailMetricOptions: metricOptions.concat([
+        { text: i18n("Sunrise / sunset"), id: "sun" }
+    ])
+    function detailMetricIndexOf(id) {
+        for (var i = 0; i < detailMetricOptions.length; ++i)
+            if (detailMetricOptions[i].id === id) return i;
+        return 0;
+    }
+    // Per-hour options for the Detailed hourly-card readouts (chance/amount are
+    // per-hour, unlike the header's daily-total precip/snow sums).
+    readonly property var hourlyMetricOptions: [
+        { text: i18n("None"),          id: "none"      },
+        { text: i18n("Wind"),          id: "wind"      },
+        { text: i18n("Precip chance"), id: "precip"    },
+        { text: i18n("Precip amount"), id: "precipAmt" },
+        { text: i18n("Snowfall"),      id: "snow"      },
+        { text: i18n("Feels like"),    id: "feelsLike" },
+        { text: i18n("Humidity"),      id: "humidity"  },
+        { text: i18n("UV Index"),      id: "uv"        }
+    ]
+    function hourlyMetricIndexOf(id) {
+        for (var i = 0; i < hourlyMetricOptions.length; ++i)
+            if (hourlyMetricOptions[i].id === id) return i;
+        return 0;
+    }
+
+    ColumnLayout {
+        anchors.fill: parent
+        anchors.topMargin: Kirigami.Units.gridUnit   // don't sit flush against the top
+        spacing: Kirigami.Units.largeSpacing
+
+        // ── shared: the condition-icon pack applies to BOTH layouts, so it sits
+        //    above the tabs rather than inside one of them ──
+        Kirigami.FormLayout {
+            Layout.fillWidth: true
+
+            ComboBox {
+                wheelEnabled: false   // don't change value on scroll-over
+                popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                id: iconPackCombo
+                Kirigami.FormData.label: i18n("Icon pack:")
+                textRole: "text"
+                // each option stores its pack id (matches the registry in main.qml)
+                model: [
+                    { text: i18n("Basmilius (color)"), id: "basmilius" },
+                    { text: i18n("System theme"),       id: "system"    },
+                    { text: i18n("Custom folder…"),     id: "custom"    }
+                ]
+                Component.onCompleted: {
+                    for (var i = 0; i < model.length; ++i)
+                        if (model[i].id === page.cfg_iconPack) { currentIndex = i; break; }
+                }
+                onActivated: page.cfg_iconPack = model[currentIndex].id
+            }
+            RowLayout {
+                Kirigami.FormData.label: i18n("Custom folder:")
+                visible: page.cfg_iconPack === "custom"
+                Button {
+                    text: i18n("Choose…")
+                    icon.name: "folder-open"
+                    onClicked: iconFolderDialog.open()
+                }
+                Label {
+                    Layout.fillWidth: true
+                    // cap the layout contribution so a long path can't inflate the
+                    // form width (elide trims rendering, not implicitWidth)
+                    Layout.preferredWidth: Kirigami.Units.gridUnit * 10
+                    elide: Text.ElideMiddle
+                    opacity: 0.7
+                    text: page.cfg_customIconDir
+                          ? page.cfg_customIconDir.replace(/^file:\/\//, "")
+                          : i18n("(none selected)")
+                }
+            }
+            Label {
+                visible: page.cfg_iconPack === "custom"
+                Layout.fillWidth: true
+                Layout.preferredWidth: Kirigami.Units.gridUnit * 16
+                wrapMode: Text.WordWrap
+                font: Kirigami.Theme.smallFont
+                opacity: 0.7
+                text: i18n("Folder with SVGs named like the bundled set (wi-day-sunny.svg, wi-night-clear.svg, …). Tip: copy contents/icons/basmilius/32/ as a starting point so every condition is covered, then edit.")
+            }
+        }
+
+        FolderDialog {
+            id: iconFolderDialog
+            title: i18n("Choose icon folder")
+            onAccepted: page.cfg_customIconDir = selectedFolder
+        }
+
+        TabBar {
+            id: tabBar
+            Layout.fillWidth: true
+            TabButton { text: i18n("Detailed") }
+            TabButton { text: i18n("Simple") }
+            TabButton { text: i18n("Panel") }
+        }
+
+        StackLayout {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            currentIndex: tabBar.currentIndex
+
+            // ── Detailed layout ──
+            ScrollView {
+                contentWidth: availableWidth
+                RowLayout {
+                    spacing: Kirigami.Units.gridUnit * 2
+                    Kirigami.FormLayout {
+                        Layout.alignment: Qt.AlignTop
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: dailyDaysSpin
+                            Kirigami.FormData.label: i18n("Forecast days:")
+                            from: 1
+                            to: 7
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: heroSpin
+                            Kirigami.FormData.label: i18n("Header icon size:")
+                            from: 48
+                            to: 200
+                            stepSize: 4
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: tempSpin
+                            Kirigami.FormData.label: i18n("Temperature font:")
+                            from: 24
+                            to: 120
+                            stepSize: 2
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: condFontSpin
+                            Kirigami.FormData.label: i18n("Condition & location font:")
+                            from: 12
+                            to: 64
+                            stepSize: 1
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: dailySpin
+                            Kirigami.FormData.label: i18n("Daily tab icon size:")
+                            from: 12
+                            to: 64
+                            stepSize: 2
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: hourlySpin
+                            Kirigami.FormData.label: i18n("Hourly icon size:")
+                            from: 16
+                            to: 80
+                            stepSize: 2
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: hourlyTempSpin
+                            Kirigami.FormData.label: i18n("Hourly temperature font:")
+                            from: 8
+                            to: 40
+                            stepSize: 1
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: hourlyCardSpin
+                            Kirigami.FormData.label: i18n("Hourly card font:")
+                            from: 7
+                            to: 32
+                            stepSize: 1
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: dayStartCombo
+                            Kirigami.FormData.label: i18n("Day starts at:")
+                            textRole: "text"
+                            // hour a non-today day opens at (detailDayStartHour): 6 AM skips
+                            // the overnight cards, Midnight opens at 00:00
+                            model: [
+                                { text: i18n("6 AM"),     value: 6 },
+                                { text: i18n("Midnight"), value: 0 }
+                            ]
+                            Component.onCompleted: {
+                                for (var i = 0; i < model.length; ++i)
+                                    if (model[i].value === page.cfg_detailDayStartHour) { currentIndex = i; break; }
+                            }
+                            onActivated: page.cfg_detailDayStartHour = model[currentIndex].value
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: forecastAnimCombo
+                            Kirigami.FormData.label: i18n("Animation:")
+                            textRole: "text"
+                            // each option maps to the daily/hourly animation booleans
+                            model: [
+                                { text: i18n("None"),            d: false, h: false },
+                                { text: i18n("Daily tab icons"), d: true,  h: false },
+                                { text: i18n("Hourly icons"),    d: false, h: true  },
+                                { text: i18n("Both"),            d: true,  h: true  }
+                            ]
+                            Component.onCompleted: {
+                                var d = page.cfg_animatedDailyIcons, h = page.cfg_animatedHourlyIcons;
+                                currentIndex = (d && h) ? 3 : (h ? 2 : (d ? 1 : 0));
+                            }
+                            onActivated: {
+                                page.cfg_animatedDailyIcons  = model[currentIndex].d;
+                                page.cfg_animatedHourlyIcons = model[currentIndex].h;
+                            }
+                        }
+
+                        Kirigami.Separator {
+                            Kirigami.FormData.label: i18n("Hourly cards (2 elements)")
+                            Kirigami.FormData.isSection: true
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: hourMetric1
+                            Kirigami.FormData.label: i18n("Line 1:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1)
+                            onActivated: page.cfg_hourlyMetric1 = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: hourMetric1Fallback
+                            Kirigami.FormData.label: i18n("Fallback:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1Fallback)
+                            onActivated: page.cfg_hourlyMetric1Fallback = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: hourMetric2
+                            Kirigami.FormData.label: i18n("Line 2:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2)
+                            onActivated: page.cfg_hourlyMetric2 = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: hourMetric2Fallback
+                            Kirigami.FormData.label: i18n("Fallback:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2Fallback)
+                            onActivated: page.cfg_hourlyMetric2Fallback = page.hourlyMetricOptions[currentIndex].id
+                        }
+                    }
+                    Kirigami.FormLayout {
+                        Layout.alignment: Qt.AlignTop
+                        Layout.topMargin: -Kirigami.Units.largeSpacing * 2   // align top with the left column
+                        Kirigami.Separator {
+                            Kirigami.FormData.label: i18n("Weather Elements (up to 4)")
+                            Kirigami.FormData.isSection: true
+                        }
+                        SpinBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            id: detHeaderFontSpin
+                            Kirigami.FormData.label: i18n("Weather Elements font:")
+                            from: 7
+                            to: 32
+                            stepSize: 1
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: detMetric1
+                            Kirigami.FormData.label: i18n("Line 1:")
+                            textRole: "text"
+                            model: page.detailMetricOptions
+                            Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric1)
+                            onActivated: page.cfg_headerMetric1 = page.detailMetricOptions[currentIndex].id
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: detMetric2
+                            Kirigami.FormData.label: i18n("Line 2:")
+                            textRole: "text"
+                            model: page.detailMetricOptions
+                            Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric2)
+                            onActivated: page.cfg_headerMetric2 = page.detailMetricOptions[currentIndex].id
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: detMetric3
+                            Kirigami.FormData.label: i18n("Line 3:")
+                            textRole: "text"
+                            model: page.detailMetricOptions
+                            Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric3)
+                            onActivated: page.cfg_headerMetric3 = page.detailMetricOptions[currentIndex].id
+                        }
+                        ComboBox {
+                            wheelEnabled: false   // don't change value on scroll-over
+                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                            id: detMetric4
+                            Kirigami.FormData.label: i18n("Line 4:")
+                            textRole: "text"
+                            model: page.detailMetricOptions
+                            Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric4)
+                            onActivated: page.cfg_headerMetric4 = page.detailMetricOptions[currentIndex].id
+                        }
+                        Button {
+                            text: i18n("Reset to none")
+                            icon.name: "edit-clear-all"
+                            onClicked: {
+                                page.cfg_headerMetric1 = "none"; detMetric1.currentIndex = 0;
+                                page.cfg_headerMetric2 = "none"; detMetric2.currentIndex = 0;
+                                page.cfg_headerMetric3 = "none"; detMetric3.currentIndex = 0;
+                                page.cfg_headerMetric4 = "none"; detMetric4.currentIndex = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Simple layout ──
+            ScrollView {
+                contentWidth: availableWidth
+                Kirigami.FormLayout {
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpleDaysSpin
+                        Kirigami.FormData.label: i18n("Forecast days:")
+                        from: 1
+                        to: 7
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: sampleStepCombo
+                        Kirigami.FormData.label: i18n("Graph detail:")
+                        textRole: "text"
+                        // false = every 2 hours (12 pts/day), true = hourly (13)
+                        model: [
+                            { text: i18n("Every 2 hours"), value: false },
+                            { text: i18n("Hourly"),        value: true  }
+                        ]
+                        Component.onCompleted: currentIndex = page.cfg_simpleHourly ? 1 : 0
+                        onActivated: page.cfg_simpleHourly = model[currentIndex].value
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpleHeroSpin
+                        Kirigami.FormData.label: i18n("Header icon size:")
+                        from: 32
+                        to: 160
+                        stepSize: 4
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpleTempSpin
+                        Kirigami.FormData.label: i18n("Temperature font:")
+                        from: 24
+                        to: 120
+                        stepSize: 2
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpleIconSpin
+                        Kirigami.FormData.label: i18n("Hourly icon size:")
+                        from: 12
+                        to: 64
+                        stepSize: 2
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpleHourSpin
+                        Kirigami.FormData.label: i18n("Hour font:")
+                        from: 7
+                        to: 32
+                        stepSize: 1
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpleGraphTempSpin
+                        Kirigami.FormData.label: i18n("Graph temperature font:")
+                        from: 8
+                        to: 40
+                        stepSize: 1
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: simpleAnimCombo
+                        Kirigami.FormData.label: i18n("Animation:")
+                        textRole: "text"
+                        // each option maps to the hourly-icon / header-icon animation booleans
+                        model: [
+                            { text: i18n("None"),         hourly: false, header: false },
+                            { text: i18n("Hourly icons"), hourly: true,  header: false },
+                            { text: i18n("Header icon"),  hourly: false, header: true  },
+                            { text: i18n("Both"),         hourly: true,  header: true  }
+                        ]
+                        Component.onCompleted: {
+                            var ho = page.cfg_simpleAnimatedIcons, he = page.cfg_simpleHeaderAnim;
+                            currentIndex = (ho && he) ? 3 : (he ? 2 : (ho ? 1 : 0));
+                        }
+                        onActivated: {
+                            page.cfg_simpleAnimatedIcons = model[currentIndex].hourly;
+                            page.cfg_simpleHeaderAnim    = model[currentIndex].header;
+                        }
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: graphColorCombo
+                        Kirigami.FormData.label: i18n("Graph coloring:")
+                        // index maps directly to graphColorMode (0..3)
+                        model: [
+                            i18n("Temperature & precipitation"),
+                            i18n("Temperature only"),
+                            i18n("Precipitation only"),
+                            i18n("None")
+                        ]
+                    }
+
+                    Kirigami.Separator {
+                        Kirigami.FormData.label: i18n("Weather Elements (up to 4)")
+                        Kirigami.FormData.isSection: true
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: simpHeaderFontSpin
+                        Kirigami.FormData.label: i18n("Weather Elements font:")
+                        from: 7
+                        to: 32
+                        stepSize: 1
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: simpMetric1
+                        Kirigami.FormData.label: i18n("Line 1:")
+                        textRole: "text"
+                        model: page.metricOptions
+                        Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric1)
+                        onActivated: page.cfg_simpleHeaderMetric1 = page.metricOptions[currentIndex].id
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: simpMetric2
+                        Kirigami.FormData.label: i18n("Line 2:")
+                        textRole: "text"
+                        model: page.metricOptions
+                        Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric2)
+                        onActivated: page.cfg_simpleHeaderMetric2 = page.metricOptions[currentIndex].id
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: simpMetric3
+                        Kirigami.FormData.label: i18n("Line 3:")
+                        textRole: "text"
+                        model: page.metricOptions
+                        Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric3)
+                        onActivated: page.cfg_simpleHeaderMetric3 = page.metricOptions[currentIndex].id
+                    }
+                    ComboBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        id: simpMetric4
+                        Kirigami.FormData.label: i18n("Line 4:")
+                        textRole: "text"
+                        model: page.metricOptions
+                        Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric4)
+                        onActivated: page.cfg_simpleHeaderMetric4 = page.metricOptions[currentIndex].id
+                    }
+                    Button {
+                        text: i18n("Reset to none")
+                        icon.name: "edit-clear-all"
+                        onClicked: {
+                            page.cfg_simpleHeaderMetric1 = "none"; simpMetric1.currentIndex = 0;
+                            page.cfg_simpleHeaderMetric2 = "none"; simpMetric2.currentIndex = 0;
+                            page.cfg_simpleHeaderMetric3 = "none"; simpMetric3.currentIndex = 0;
+                            page.cfg_simpleHeaderMetric4 = "none"; simpMetric4.currentIndex = 0;
+                        }
+                    }
+                }
+            }
+
+            // ── Panel (compact view) ──
+            ScrollView {
+                contentWidth: availableWidth
+                Kirigami.FormLayout {
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: panelIconSpin
+                        Kirigami.FormData.label: i18n("Panel icon size (% of height):")
+                        from: 50
+                        to: 200
+                        stepSize: 5
+                    }
+                    SpinBox {
+                        wheelEnabled: false   // don't change value on scroll-over
+                        id: panelFontSpin
+                        Kirigami.FormData.label: i18n("Panel temperature font (% of height):")
+                        from: 20
+                        to: 90
+                        stepSize: 2
+                    }
+                    CheckBox {
+                        id: panelColorCheck
+                        Kirigami.FormData.label: i18n("Icon color:")
+                        text: i18n("Use colored icon (instead of white)")
+                    }
+                }
+            }
+        }
+    }
+}

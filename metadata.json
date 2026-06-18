@@ -1,0 +1,20 @@
+{
+  "KPackageStructure": "Plasma/Applet",
+  "KPlugin": {
+    "Id": "org.bvlthvzvr.weather",
+    "Name": "Bare Weather",
+    "Description": "A simple, interactive weather widget that minds its own business. For KDE Plasma",
+    "Icon": "weather-clear-night",
+    "Category": "Environment and Weather",
+    "License": "MIT",
+    "Authors": [
+      {
+        "Name": "bvlthvzvr"
+      }
+    ],
+    "Version": "0.1.0",
+    "Website": "https://github.com/bvlthvzvr"
+  },
+  "X-Plasma-API-Minimum-Version": "6.0",
+  "X-Plasma-MainScript": "ui/main.qml"
+}
