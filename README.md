@@ -10,7 +10,8 @@ A simple, interactive weather widget that minds its own business. For KDE Plasma
 - **Daily Forecast** - Glance across the tabs and the icons give you the gist of the day's condition and temperature. Choose your starting hour between 12AM or 6AM when switching day tabs so the timeline opens closer to when you start the day.
 - **Hourly cards** - Scroll or drag through the whole forecast, the day tabs keep pace.  Cards are color coded when there is snow, rain, or a mixture of both.
 
-<video src="https://github.com/user-attachments/assets/8c8c85c7-979a-42c2-89fd-e033eaf67a3a" autoplay loop muted playsinline width="480"></video>
+<img width="600" height="451" alt="untitled2" src="https://github.com/user-attachments/assets/2e3c201e-f139-47a4-a69b-d8afc05337c6" />
+
 
 
 
@@ -22,8 +23,8 @@ A simple, interactive weather widget that minds its own business. For KDE Plasma
 - **Precipitation Curve** - A separate curve in blue representing the precipitation chance throughout the days. The curve also shows the precipitation amount when it detects it. The curve tints toward white when there is snow. 
 - **Day Tabs** - Switching to a different day and the curve morphs to that day's shape. 
 - **Timeline** - Pick how dense the curve is between displaying every hour or every 2 hours. 
+<img width="600" height="352" alt="untitled" src="https://github.com/user-attachments/assets/a13a3c25-562a-436a-8d5f-eda71c840548" />
 
-<video src="https://github.com/user-attachments/assets/1d070035-6d91-4ac7-a4c4-236a39fd5fca" autoplay loop muted playsinline width="480"></video>
 
 
 
@@ -89,7 +90,7 @@ Less is bare! This widget just tells you what the sky's up to.  **No account, no
 - Open-Meteo needs no account or key and does no tracking. [Terms & Privacy](https://open-meteo.com/en/terms)
 
 
-**Language**
+## Language
 
 Bare Weather is only in English for now, it would be wonderful to see it in yours! Translation is just about as easy as filling out a form. No coding required.
 1. Download the template [`po/weather.pot`](https://github.com/bvlthvzvr/BareWeather/blob/main/po/weather.pot)
