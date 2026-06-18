@@ -11,6 +11,9 @@
 *.qmlc
 *.jsc
 
+# Built package artifact (produced by tools/build-plasmoid.py)
+*.plasmoid
+
 # Syncthing folder marker
 .stfolder/
 
