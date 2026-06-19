@@ -68,7 +68,7 @@ kpackagetool6 --type Plasma/Applet --remove org.bvlthvzvr.weather
 
 ## Privacy
 
-Less is bare! This widget just tells you what the sky's up to.  **No account, no API key, nor does it offer other weather service options that requires one, and nothing the widget use to profile, or monetize where and who you are.** The widget use Open-Meteo as the only provider, KDE Public Alert for weather alerts, and Mullvad for auto detect location.  Location search runs through Open-Meteo,  same provider as the weather, so there's no extra third party needed. 
+Pared to the bare necessities. **No account, no API key, nor does it offer other weather service options that requires one, and nothing the widget use to profile, or monetize where and who you are.** The widget use Open-Meteo as the only provider, KDE Public Alert for weather alerts, and Mullvad for auto detect location.  Location search runs through Open-Meteo,  same provider as the weather, so there's no extra third party needed. 
 
 **Bare Weather under the hood**
 
@@ -83,8 +83,8 @@ Less is bare! This widget just tells you what the sky's up to.  **No account, no
 - **Auto-detect and alerts are both off by default**. The widget makes no IP-geolocation call and no alert request at all until you use them.
 - The only IP-geolocation provider is Mullvad, picked because it's a privacy
   company with a public no-logging stance.
-- Alerts come from the KDE Public Alert Server. Rather than reaching out to each government agency in different countries, **KDE Public Alert aggregates hundreds of CAP feeds  worldwide into one place. So you get the alerts without having to contact or revealing yourself to every agency for alerts.** 
-- **No map picker** as it requires dependency to use them.  And exposes your IP for something the auto detection and manual location lookup already handles.
+- Weather alerts come from KDE Public Alert Server, a free and open-source aggregator. **It collects official severe weather warnings in standard CAP format from agencies around the world into one place, so you get worldwide alerts without ever contacting, or exposing yourself to, each individual agency.**
+- **No map picker** as it requires dependency to use them.  And exposes your IP to something the auto detection and manual location lookup already handles.
 - **Coordinates get rounded to about 1 km/.62mi (2 decimals)** on every weather and alert
   request, **even if you enter the exact coordinate**. 
 - Open-Meteo needs no account or key and does no tracking. [Terms & Privacy](https://open-meteo.com/en/terms)
@@ -95,7 +95,7 @@ Less is bare! This widget just tells you what the sky's up to.  **No account, no
 Bare Weather is only in English for now, it would be wonderful to see it in yours! Translation is just about as easy as filling out a form. No coding required.
 1. Download the template [`po/weather.pot`](https://github.com/bvlthvzvr/BareWeather/blob/main/po/weather.pot)
 2. Rename it to your language , ex `de.po` for German, `fr.po` for French. Then fill in the translations. 
-3. Send it back by Email or  [opening an issue](https://github.com/bvlthvzvr/BareWeather/issues/new) and attaching the file. Otherwise open PR. 
+3. Send it back by [Email](mailto:bareweather.recreate814@silomails.com) or by [opening an issue](https://github.com/bvlthvzvr/BareWeather/issues/new) and attaching the file. Otherwise Open PR.
 
 You'll be credited for your work!
 
@@ -104,10 +104,8 @@ You'll be credited for your work!
 - Weather data from [Open-Meteo](https://open-meteo.com) (CC-BY 4.0).
 - Icons derived from [Meteocons](https://github.com/basmilius/weather-icons) by
   Bas Milius (MIT). See `contents/icons/*/ATTRIBUTION.md` for details.
-- Severe-weather alerts via the [KDE FOSS Public Alert Server](https://invent.kde.org/webapps/foss-public-alert-server)
-  (AGPL), only when you enable alerts.
-- Auto-detect via [Mullvad](https://mullvad.net), only when you
-  use auto-detect.
+- Severe-weather alerts via the [KDE FOSS Public Alert Server](https://invent.kde.org/webapps/foss-public-alert-server) (AGPL).
+- Auto-detect via [Mullvad](https://mullvad.net)
 
 ## License
 
