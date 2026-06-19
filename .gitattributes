@@ -1,0 +1,4 @@
+# Keep GitHub's language stats focused on the widget itself (QML).
+# These folders are developer tooling, not part of the shipped plasmoid.
+po/**      linguist-vendored
+tools/**   linguist-vendored
