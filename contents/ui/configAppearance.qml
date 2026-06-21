@@ -92,7 +92,8 @@ Item {
         { text: i18n("Precipitation rate"),      id: "precipRate" },
         { text: i18n("Precipitation sum"),       id: "precipSum"  },
         { text: i18n("Wind"),                    id: "wind"       },
-        { text: i18n("Snowfall today"),          id: "snowSum"    }
+        { text: i18n("Snowfall today"),          id: "snowSum"    },
+        { text: i18n("Cloud cover"),             id: "cloud"      }
     ]
     function metricIndexOf(id) {
         for (var i = 0; i < metricOptions.length; ++i)
@@ -114,12 +115,14 @@ Item {
     readonly property var hourlyMetricOptions: [
         { text: i18n("None"),          id: "none"      },
         { text: i18n("Wind"),          id: "wind"      },
+        { text: i18n("Wind + gust"),   id: "windGust"  },
         { text: i18n("Precip chance"), id: "precip"    },
         { text: i18n("Precip amount"), id: "precipAmt" },
         { text: i18n("Snowfall"),      id: "snow"      },
         { text: i18n("Feels like"),    id: "feelsLike" },
         { text: i18n("Humidity"),      id: "humidity"  },
-        { text: i18n("UV Index"),      id: "uv"        }
+        { text: i18n("UV Index"),      id: "uv"        },
+        { text: i18n("Cloud cover"),   id: "cloud"     }
     ]
     function hourlyMetricIndexOf(id) {
         for (var i = 0; i < hourlyMetricOptions.length; ++i)
@@ -195,8 +198,8 @@ Item {
         TabBar {
             id: tabBar
             Layout.fillWidth: true
-            TabButton { text: i18n("Detailed") }
-            TabButton { text: i18n("Simple") }
+            TabButton { text: i18n("Cards") }
+            TabButton { text: i18n("Graph") }
             TabButton { text: i18n("Panel") }
         }
 
@@ -316,9 +319,33 @@ Item {
                             }
                         }
 
-                        Kirigami.Separator {
-                            Kirigami.FormData.label: i18n("Hourly cards (2 elements)")
+                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing * 2 }   // gap above this section (FormLayout ignores Layout.topMargin on a section row)
+                        RowLayout {
+                            // Section header as a row so the help icon sits INLINE with the
+                            // title. Layout.fillWidth is the crucial bit: without it the row
+                            // imposes its own width on the FormLayout and shoves the two
+                            // columns apart; with it the row just fills the section span.
                             Kirigami.FormData.isSection: true
+                            Layout.fillWidth: true
+                            // Shrinkable leading indent: nudges the title right to line up with
+                            // the label column below. fillWidth + min-width 0 means it grows into
+                            // spare space but never WIDENS the section (a fixed leftMargin did,
+                            // which shoved the right column over). It's the only fillWidth child,
+                            // so it takes the slack up to its max.
+                            Item { Layout.fillWidth: true; Layout.maximumWidth: Kirigami.Units.gridUnit * 5 }
+                            Kirigami.Heading {
+                                level: 5
+                                text: i18n("Hourly cards (2 elements)")
+                            }
+                            Kirigami.Icon {
+                                source: "documentinfo"
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: implicitWidth
+                                opacity: hourlyInfoHover.hovered ? 1.0 : 0.65
+                                HoverHandler { id: hourlyInfoHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: hourlyInfoHover.hovered
+                                ToolTip.text: i18n("Shows the main metric, or the fallback on hours the main one has nothing to show.")
+                            }   // soak up remaining width so the row never dictates it
                         }
                         ComboBox {
                             wheelEnabled: false   // don't change value on scroll-over
@@ -363,15 +390,30 @@ Item {
                     }
                     Kirigami.FormLayout {
                         Layout.alignment: Qt.AlignTop
-                        Layout.topMargin: -Kirigami.Units.largeSpacing * 2   // align top with the left column
-                        Kirigami.Separator {
-                            Kirigami.FormData.label: i18n("Weather Elements (up to 4)")
+                        Layout.topMargin: 0   // header has no intrinsic top padding now, so no negative pull needed (was clipping the title)
+                        RowLayout {
+                            // inline section header (see the matching note in the Hourly cards section)
                             Kirigami.FormData.isSection: true
+                            Layout.fillWidth: true
+                            Kirigami.Heading {
+                                level: 5
+                                text: i18n("Weather Elements (up to 4)")
+                            }
+                            Kirigami.Icon {
+                                source: "documentinfo"
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: implicitWidth
+                                opacity: headerInfoHover.hovered ? 1.0 : 0.65
+                                HoverHandler { id: headerInfoHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: headerInfoHover.hovered
+                                ToolTip.text: i18n("The element header readouts follow whichever hour you hover.")
+                            }
+                            Item { Layout.fillWidth: true }
                         }
                         SpinBox {
                             wheelEnabled: false   // don't change value on scroll-over
                             id: detHeaderFontSpin
-                            Kirigami.FormData.label: i18n("Weather Elements font:")
+                            Kirigami.FormData.label: i18n("Font:")
                             from: 7
                             to: 32
                             stepSize: 1

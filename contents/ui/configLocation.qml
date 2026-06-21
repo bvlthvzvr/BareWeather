@@ -27,6 +27,10 @@ ScrollView {
     property string cfg_temperatureUnit
     property bool   cfg_unitConfigured
 
+    // shared width of the Manual input fields (name / lat / lon) and the action row,
+    // so the fields are comfortably long and the Save button can centre under them.
+    readonly property real manualFieldW: Kirigami.Units.gridUnit * 16
+
     contentWidth: availableWidth
 
     Component.onCompleted: _rebuildSaved()
@@ -443,13 +447,13 @@ ScrollView {
             TextField {
                 id: nameField
                 Kirigami.FormData.label: i18n("Location name:")
-                // same width as the action-button row so this line ends at the
-                // same right edge as Latitude/Longitude (and the buttons below).
-                // maximumWidth caps it so the larger rightPadding can't push the
-                // field's implicit width past that edge.
+                // fixed manualFieldW wide so name / lat / lon all share one length
+                // (the Save button centres under them — see actionRow). maximumWidth
+                // caps it so the larger rightPadding can't push the field's implicit
+                // width past that edge.
                 Layout.fillWidth: false
-                Layout.preferredWidth: actionRow.implicitWidth
-                Layout.maximumWidth: actionRow.implicitWidth
+                Layout.preferredWidth: page.manualFieldW
+                Layout.maximumWidth: page.manualFieldW
                 placeholderText: ""
                 // live type-ahead: stage the name AND kick the debounced search so the
                 // suggestion dropdown updates as you type (≥2 chars); clearing it closes
@@ -499,7 +503,7 @@ ScrollView {
                 Kirigami.FormData.label: ""
                 visible: page.searchStatus.length > 0
                 Layout.fillWidth: false
-                Layout.preferredWidth: actionRow.implicitWidth
+                Layout.preferredWidth: page.manualFieldW
                 wrapMode: Text.WordWrap
                 font: Kirigami.Theme.smallFont
                 opacity: 0.7
@@ -508,11 +512,10 @@ ScrollView {
             TextField {
                 id: latField
                 Kirigami.FormData.label: i18n("Latitude:")
-                // match the width of the action-button row below, so the field's
-                // right edge lines up with the "Save current location" button
+                // manualFieldW wide, matching the name & longitude fields
                 Layout.fillWidth: false
-                Layout.preferredWidth: actionRow.implicitWidth
-                Layout.maximumWidth: actionRow.implicitWidth
+                Layout.preferredWidth: page.manualFieldW
+                Layout.maximumWidth: page.manualFieldW
                 // left blank on open (Manual is for entering a NEW location); the
                 // location in use is shown by the highlight in Saved locations
                 placeholderText: ""
@@ -528,8 +531,8 @@ ScrollView {
                 id: lonField
                 Kirigami.FormData.label: i18n("Longitude:")
                 Layout.fillWidth: false
-                Layout.preferredWidth: actionRow.implicitWidth
-                Layout.maximumWidth: actionRow.implicitWidth
+                Layout.preferredWidth: page.manualFieldW
+                Layout.maximumWidth: page.manualFieldW
                 placeholderText: ""
                 inputMethodHints: Qt.ImhFormattedNumbersOnly
                 validator: DoubleValidator { bottom: -180; top: 180; decimals: 6 }
@@ -541,6 +544,10 @@ ScrollView {
                 id: actionRow
                 Kirigami.FormData.label: ""
                 Layout.topMargin: Kirigami.Units.gridUnit * 1.5
+                // as wide as the input fields, so the fill spacers centre the button under them
+                Layout.preferredWidth: page.manualFieldW
+                Layout.maximumWidth: page.manualFieldW
+                Item { Layout.fillWidth: true }
                 Button {
                     text: i18n("Save current location")
                     icon.name: "bookmark-new"
@@ -548,6 +555,7 @@ ScrollView {
                     enabled: page.cfg_locationName.length > 0
                     onClicked: page.saveCurrent()
                 }
+                Item { Layout.fillWidth: true }
             }
             Label {
                 Kirigami.FormData.label: ""

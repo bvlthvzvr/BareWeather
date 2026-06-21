@@ -75,6 +75,7 @@ PlasmoidItem {
     property real uvIndex:      NaN
     property real precipRate:   NaN   // current precipitation, mm/h
     property real windSpeed:    NaN   // current wind speed (unit follows temp unit)
+    property real windGust:     NaN   // current wind gust (same unit as windSpeed)
     property real precipSumToday: NaN // today's total precipitation, mm
     property real snowSumToday:   NaN // today's total snowfall, cm
     property real highTemp:     NaN
@@ -209,6 +210,13 @@ PlasmoidItem {
         if (!m) return "";
         switch (id) {
         case "wind":      return isNaN(m.wind) ? "" : windLabel(m.wind);
+        // "Wind + gust" → compact "5G10" (sustained-Gust, whole numbers, no unit — cards
+        // are tight, and the trailing direction arrow marks it as wind). Falls back to the
+        // plain speed when no gust rounds higher than sustained (a steady-wind hour).
+        case "windGust":  return isNaN(m.wind) ? "" :
+                              ((!isNaN(m.gust) && Math.round(m.gust) > Math.round(m.wind))
+                                  ? (Math.round(m.wind) + "G" + Math.round(m.gust))
+                                  : ("" + Math.round(m.wind)));
         // At/under precipDisplayFloor counts as nothing-to-show (so a fallback can
         // take over, and the card stays clean like the rain wash does) — NaN is
         // "no data". The card only shows a precip% once it's worth mentioning.
@@ -218,6 +226,7 @@ PlasmoidItem {
         case "humidity":  return isNaN(m.humidity) ? "" : (Math.round(m.humidity) + "%");
         case "uv":        return isNaN(m.uv) ? "" : ("UV " + Math.round(m.uv));
         case "feelsLike": return isNaN(m.feels) ? "" : tempStr(m.feels);
+        case "cloud":     return isNaN(m.cloud) ? "" : (Math.round(m.cloud) + "%");
         }
         return "";   // "none" / unknown
     }
@@ -229,7 +238,8 @@ PlasmoidItem {
     // PUA, verified against the bundled .ttf cmap.
     function hourlyMetricGlyph(id) {
         switch (id) {
-        case "precip":
+        case "cloud":     return "\uf041";   // wi-cloud (U+F041) — escape form, not the literal PUA char the others use
+        case "precip":    return "";   // wi-umbrella (U+F084) — precip *chance* (vs wi-raindrop below = precip amount)
         case "precipAmt": return "";   // wi-raindrop
         case "snow":      return "";   // wi-snowflake-cold
         case "humidity":  return "";   // wi-humidity
@@ -246,7 +256,8 @@ PlasmoidItem {
         switch (id) {
         case "uv":
         case "humidity":
-        case "feelsLike": return 1.25;
+        case "feelsLike":
+        case "precip":    return 1.25;   // wi-umbrella reads a touch large at base — nudge down to match sun/humidity
         }
         return 1.5;
     }
@@ -330,7 +341,19 @@ PlasmoidItem {
         }
         if (id === "wind") {
             var ws = (hourSample && !isNaN(hourSample.wind)) ? hourSample.wind : windSpeed;
-            return isNaN(ws) ? "" : i18n("Wind: %1", "<b>" + windLabel(ws) + "</b>");
+            if (isNaN(ws)) return "";
+            // show the gust whenever it rounds higher than the sustained wind — the SAME
+            // rule as the hourly cards, so header and cards never disagree (no "5G10" on a
+            // card while the header hides it). Skips a redundant "5 G5" on calm hours.
+            var gs = (hourSample && !isNaN(hourSample.gust)) ? hourSample.gust : windGust;
+            var windBody = (!isNaN(gs) && Math.round(gs) > Math.round(ws))
+                ? (Math.round(ws) + " G" + Math.round(gs) + " " + (units === "fahrenheit" ? "mph" : "km/h"))
+                : windLabel(ws);
+            return i18n("Wind: %1", "<b>" + windBody + "</b>");
+        }
+        if (id === "cloud") {
+            var cc = (hourSample && !isNaN(hourSample.cloud)) ? hourSample.cloud : cloudCover;
+            return isNaN(cc) ? "" : i18n("Cloud cover: %1", "<b>" + Math.round(cc) + "%</b>");
         }
         if (id === "snowSum") {
             var ss = day ? day.snowSum : snowSumToday;
@@ -437,6 +460,17 @@ PlasmoidItem {
         return out;
     }
 
+    // The hourly sample for the hour containing "now" (location tz) — the first hour
+    // timeline() keeps. Lets the Detailed header fall back to the CURRENT HOUR's forecast
+    // (so it matches the hourly cards) instead of the live `current` block when nothing's hovered.
+    readonly property var currentHourSample: {
+        if (!allHourly || !allHourly.length) return null;
+        var hnow = locNow().getTime();
+        for (var ci = 0; ci < allHourly.length; ++ci)
+            if (new Date(allHourly[ci].time).getTime() + 3600000 >= hnow) return allHourly[ci];
+        return null;
+    }
+
     // All hourly entries across the configured days, sampled every `step` hours
     // (00:00, 02:00, …) — the continuous data for the simple-layout graph.
     // `days` overrides the day span (defaults to dailyDays).
@@ -486,9 +520,9 @@ PlasmoidItem {
         var url = "https://api.open-meteo.com/v1/forecast"
                 + "?latitude=" + coarseCoord(lat)
                 + "&longitude=" + coarseCoord(lon)
-                + "&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,is_day,uv_index,precipitation,wind_speed_10m,cloud_cover"
+                + "&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,is_day,uv_index,precipitation,wind_speed_10m,wind_gusts_10m,cloud_cover"
                 + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,sunrise,sunset"
-                + "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,uv_index,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_direction_10m,cloud_cover"
+                + "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,uv_index,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover"
                 + "&forecast_days=7"
                 + "&timezone=auto"
                 + "&wind_speed_unit=" + (units === "fahrenheit" ? "mph" : "kmh")
@@ -535,6 +569,7 @@ PlasmoidItem {
                 root.uvIndex      = c.uv_index;
                 root.precipRate   = (c.precipitation !== undefined) ? c.precipitation : NaN;
                 root.windSpeed    = (c.wind_speed_10m !== undefined) ? c.wind_speed_10m : NaN;
+                root.windGust     = (c.wind_gusts_10m !== undefined) ? c.wind_gusts_10m : NaN;
                 root.cloudCover   = (c.cloud_cover !== undefined) ? c.cloud_cover : NaN;
                 if (data.daily && data.daily.time) {
                     var dd = data.daily;
@@ -577,6 +612,7 @@ PlasmoidItem {
                             snow:    hh.snowfall ? hh.snowfall[hi] : NaN,   // cm in that hour
                             cloud:   hh.cloud_cover ? hh.cloud_cover[hi] : NaN,   // % cover, for overcast-snow icon
                             wind:    hh.wind_speed_10m ? hh.wind_speed_10m[hi] : NaN,
+                            gust:    hh.wind_gusts_10m ? hh.wind_gusts_10m[hi] : NaN,
                             windDir: hh.wind_direction_10m ? hh.wind_direction_10m[hi] : 0
                         });
                     root.allHourly = harr;

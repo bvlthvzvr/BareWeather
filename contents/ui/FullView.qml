@@ -14,6 +14,11 @@ Item {
 
     property var weatherRoot
     property int selectedDay: 0
+    // hour whose card the pointer is over, so the header's instantaneous metrics
+    // (cloud, humidity, UV, feels, wind) track it like the graph scrubs — null when
+    // not hovering, so they fall back to the current reading. Day-based metrics
+    // (precip/snow totals, sun) keep following selectedDay regardless.
+    property var hoveredHourSample: null
 
     // Uniform padding around the whole popup
     readonly property int pad: Math.round(Kirigami.Units.gridUnit * 0.85)
@@ -283,9 +288,12 @@ Item {
                         id: metricRow
                         required property int index
                         required property var modelData
-                        // pass the focused day so day-based metrics (sun, precip/snow
-                        // totals) follow the timeline as it's scrolled/dragged/tab-switched
-                        readonly property string metric: weatherRoot ? weatherRoot.metricText(modelData, full.selectedDay) : ""
+                        // pass the focused day so day-based metrics (sun, precip/snow totals)
+                        // follow the timeline. For the hour: the hovered card while the pointer
+                        // is over the strip, else the CURRENT hour's sample — so when nothing's
+                        // hovered the instantaneous metrics read "now" the same way the cards do
+                        // (the current-hour forecast), not the slightly-different live block.
+                        readonly property string metric: weatherRoot ? weatherRoot.metricText(modelData, full.selectedDay, full.hoveredHourSample || weatherRoot.currentHourSample) : ""
                         // keep the FIRST row visible for the alert "!" even when its
                         // metric text is empty (e.g. metric set to "none", or a precip
                         // metric that's blank on a dry day) — an invisible parent would
@@ -471,6 +479,13 @@ Item {
             boundsBehavior: Flickable.StopAtBounds
             clip: true
 
+            // Whenever the pointer isn't over the hourly strip at all, drop the hovered
+            // hour so the header readouts fall back to the current ("now") reading. The
+            // per-card HoverHandlers pick the hour while inside; this is the robust catch-all
+            // for leaving the section (a fast exit can skip a card's own hovered=false, and
+            // a stale identity-guard miss would otherwise leave the header stuck on an hour).
+            HoverHandler { onHoveredChanged: if (!hovered) full.hoveredHourSample = null }
+
             // track scroll direction so cards deal in from the side they enter
             property real _prevContentX: 0
             property int scrollDir: 1   // 1 = entering from right, -1 = from left
@@ -630,6 +645,16 @@ Item {
                                 // the hour this card shows, aliased so the inner metric
                                 // Repeater (whose own modelData is a metric id) can reach it
                                 readonly property var hourData: modelData
+
+                                // hovering a card feeds its hour to the header metrics; the
+                                // identity guard means sliding A→B doesn't let A's exit wipe
+                                // B's freshly-set value (whichever order the events fire).
+                                HoverHandler {
+                                    onHoveredChanged: {
+                                        if (hovered) full.hoveredHourSample = card.hourData;
+                                        else if (full.hoveredHourSample === card.hourData) full.hoveredHourSample = null;
+                                    }
+                                }
 
                                 // is this card within the visible strip? (parent is the
                                 // Loader, whose x is its position in the flickable content)
@@ -794,8 +819,8 @@ Item {
                                                 text: hMetricRow.val
                                                 // default theme text (white) — card readouts aren't colour-coded
                                             }
-                                            Text {   // wind direction glyph (wind metric only)
-                                                visible: hMetricRow.val.length > 0 && hMetricRow.effId === "wind" && hMetricRow.m && !isNaN(hMetricRow.m.windDir)
+                                            Text {   // wind direction glyph (wind / wind+gust metrics)
+                                                visible: hMetricRow.val.length > 0 && (hMetricRow.effId === "wind" || hMetricRow.effId === "windGust") && hMetricRow.m && !isNaN(hMetricRow.m.windDir)
                                                 text: weatherRoot ? weatherRoot.windDirectionGlyph(hMetricRow.m.windDir) : ""
                                                 color: Kirigami.Theme.textColor
                                                 font.family: wiFont.status === FontLoader.Ready ? wiFont.font.family : ""

@@ -65,8 +65,29 @@ Item {
     readonly property int pad: Math.round(Kirigami.Units.gridUnit * 0.85)
     readonly property string precipColor: "#42a5f5"
     readonly property string snowLabelColor: "#d8ecff"   // pale icy blue for snow cm labels
-    readonly property string sunGold: "#ffa840"          // warm amber the temp line blooms to at a sun event
-    readonly property real   sunBloomHalfCols: 1.1       // half-width of that bloom, measured in curve columns
+    readonly property string sunGold: "#ffa840"          // warm amber of the sunset glyph + its time label
+    readonly property string sunRiseColor: "#f8c01c"     // sunrise gold, nudged slightly toward yellow from the glyph's #f8af18 — sunrise time label + bloom share it
+
+    // ── Sun bloom: a soft radial glow that rises off the temp line where it
+    // crosses a sunrise or sunset, clipped to the area ABOVE the curve so it
+    // never spills below. Two-tone — sunrise is the gold of its icon (#f8af18,
+    // #fbbf24 hot core), sunset orange.
+    // Ported from a Claude-design SVG (radialGradient + clip + blurred streak)
+    // to Canvas 2D: the radial is an ellipse via ctx.scale, the streak is a
+    // stack of wide low-alpha strokes (Canvas has no feGaussianBlur). Colours
+    // are RGB triples; alphas come from the *Alpha tunables below so "soft" can
+    // be dialled in one place. core = on the line, mid = the body, streak = the
+    // glow laid along the line itself.
+    readonly property var sunGlow: ({
+        "rise": { core: [252, 208,  46], mid: [248, 192,  28], streak: [248, 192,  28] },
+        "set":  { core: [255, 205, 120], mid: [255, 145,  62], streak: [255, 154,  68] }
+    })
+    readonly property real sunGlowCoreA:   0.62   // brightest (on the line) — softened from the design's .97
+    readonly property real sunGlowFeather: 3.5    // radial falloff exponent: alpha = coreA·exp(−feather·r²). Higher = softer, more feathered rim; lower = a fuller, more defined glow
+    readonly property real sunGlowStreakA: 0.45   // peak alpha of the line streak
+    readonly property real sunGlowHalfCols: 1.4   // horizontal radius of the radial bloom, in curve columns (feathering keeps a soft edge instead of wedging on a slope)
+    readonly property real sunGlowRiseIcons: 1.2  // vertical reach upward, in sun-glyph heights (≤1 keeps the glow no taller than the icon)
+    readonly property real sunStreakHalfCols: 2.2 // half-width of the warm streak ALONG the line, in columns — carries most of the bloom's width (always hugs the curve, never wedges)
 
     // ── Temperature → colour gradient: cold blue → cool teal → mild green →
     // warm amber → hot orange-red. The line and band are tinted per hour by how
@@ -289,12 +310,11 @@ Item {
         }
         return out;
     }
-    readonly property var sunEventsMs: sunMarkerModel.map(function(e) { return e.ms; })
-    // curve-space x for a time instant, matching sunBloomLine's mapping so a glyph
+    // curve-space x for a time instant, matching sunBloomPeaks's mapping so a glyph
     // sits exactly over the bloom: fractional sample index gFrac=(t−s0)/step, then
     // column (gFrac − hourPos) → screen x. NaN until the sample grid exists.
     // sample-grid origin + step (ms), cached per data load — xAtTime / sunMarkerLift /
-    // sunBloomLine read these instead of re-parsing two Date strings on every call
+    // sunBloomPeaks read these instead of re-parsing two Date strings on every call
     // (each runs per sun marker per frame during a drag). Spacing is uniform (1 h / 2 h).
     readonly property real sampleT0Ms:   (samples && samples.length)     ? new Date(samples[0].time).getTime() : NaN
     readonly property real sampleStepMs: (samples && samples.length > 1)
@@ -355,7 +375,7 @@ Item {
     // threshold while scrolling. Asymmetric: a quick fade IN, a slower lingering fade
     // OUT. Each Behavior picks via its own on-flag — at fade start the flag already
     // holds the target state (on → in, off → out).
-    readonly property int  readoutFadeDur:    150   // fade IN
+    readonly property int  readoutFadeDur:    80    // fade IN
     readonly property int  readoutFadeOutDur: 500   // fade OUT
 
     // y-scale tracks the interpolated values, so the vertical range eases too. One
@@ -425,7 +445,14 @@ Item {
     // is present there and the value just MORPHS as you scroll (like the temp
     // numbers), instead of blinking as a peak slides across fixed columns. Snow
     // labels use a fixed cm floor (0.1) the same way.
-    readonly property int pctLabelMin: 30
+    //
+    // pctLabelHide is the HYSTERESIS release point: a shown label only hides once the
+    // morphing value falls below it (not back at pctLabelMin). Without this gap, two
+    // adjacent hours whose chances bracket 30 (e.g. 39% and 16%) blank the label as
+    // the interpolated value passes ~27% mid-scroll; the band keeps it visible across
+    // the seam and only clears it where the column is genuinely dry.
+    readonly property int pctLabelMin:  30
+    readonly property int pctLabelHide: 20
 
     readonly property bool scrolling: posAnim.running || flickAnim.running || dragging
 
@@ -458,39 +485,141 @@ Item {
         return "rgba(" + r + "," + g + "," + b + "," + alpha + ")";
     }
 
-    // Horizontal stroke style for the temp line that stays `baseColor` everywhere
-    // EXCEPT a localized warm bloom (`sunGold`) where the line crosses a sunrise or
-    // sunset — a gradient with base→gold→base stops around each visible event. This
-    // is a LOCAL accent, not a day/night recolor. Returns the flat baseColor when no
-    // event is on screen (or the geometry/data isn't ready), so the line is unchanged.
-    // Event x: a sun instant maps to fractional sample index gFrac = (t − s0)/step;
-    // curve column i tracks global index (hourPos + i), so its gradient offset is
-    // (gFrac − hourPos)/(nPts−1). `step` is read from the data (1h or 2h modes).
-    function sunBloomLine(ctx, gx0, gx1, baseColor) {
-        var evs = sunEventsMs;
-        if (!evs.length || nPts < 2 || gx1 <= gx0 || !samples || samples.length < 2)
-            return baseColor;
+    function rgbaArr(c, a) { return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a.toFixed(3) + ")"; }
+
+    // Sun events currently on (or just off) screen, as {off, rise}. `off` is the
+    // fractional curve-column offset (0 = leftmost column, 1 = rightmost): a sun
+    // instant maps to fractional sample index gFrac = (t − s0)/step, and column i
+    // tracks global index (hourPos + i), so off = (gFrac − hourPos)/(nPts−1).
+    // `step` is read from the data (1h or 2h modes). Margin = the bloom half-width
+    // so a glow whose centre is just off-screen still bleeds in. Drives drawSunBloom.
+    function sunBloomPeaks() {
+        var evs = sunMarkerModel;
+        if (!evs.length || nPts < 2 || !samples || samples.length < 2) return [];
         var s0 = sampleT0Ms, step = sampleStepMs;
-        if (isNaN(s0) || isNaN(step) || step <= 0) return baseColor;
-        var denom = nPts - 1;
-        var hw = sunBloomHalfCols / denom;
-        var peaks = [];
+        if (isNaN(s0) || isNaN(step) || step <= 0) return [];
+        var denom = nPts - 1, hw = sunGlowHalfCols / denom, out = [];
         for (var i = 0; i < evs.length; ++i) {
-            var off = ((evs[i] - s0) / step - hourPos) / denom;
-            if (off > -hw && off < 1 + hw) peaks.push(off);
+            var off = ((evs[i].ms - s0) / step - hourPos) / denom;
+            if (off > -hw && off < 1 + hw) out.push({ off: off, rise: evs[i].rise });
         }
-        if (!peaks.length) return baseColor;
-        peaks.sort(function(a, b) { return a - b; });
-        var grad = ctx.createLinearGradient(gx0, 0, gx1, 0);
-        grad.addColorStop(0, baseColor);
+        return out;
+    }
+
+    // Paint the radial sun bloom + line streak for every on-screen sun event.
+    // Drawn straight onto the chart canvas (after the fills, before the crisp temp
+    // line) so the line sits on top of its own glow. xs/ty are the live (morphing)
+    // curve columns; gx0/gx1 the horizontal span shared with the gradients. Each
+    // event: a tall radial ellipse (core on the line, fading up, clipped above the
+    // curve) plus a soft horizontal streak laid along the line itself.
+    function drawSunBloom(ctx, xs, ty, gx0, gx1, w) {
+        var peaks = sunBloomPeaks();
+        if (!peaks.length) return;
+        var n = xs.length, spanX = gx1 - gx0;
+        if (n < 2 || spanX <= 0) return;
+        var denom = nPts - 1;
+        var colW = spanX / denom;                 // px per curve column
+        var rx = sunGlowHalfCols * colW;          // horizontal radius
+        // upward reach measured in sun-glyph heights, so the glow never overshoots
+        // the icon pinned above the line (icon = hourlyInfoFontSize * 3.1, see marker delegate).
+        var iconSz = weatherRoot ? weatherRoot.hourlyInfoFontSize * 3.1 : 34;
+        var ry = iconSz * sunGlowRiseIcons;       // upward reach
+        if (rx <= 0 || ry <= 0) return;
+
+        // clip to the area ABOVE the temp curve (the whole trick from the design):
+        // trace the curve, then close up-and-over the top so the glow can't spill below.
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(0, ty[0]);
+        ctx.lineTo(xs[0], ty[0]);
+        smooth(ctx, xs, ty);
+        ctx.lineTo(w, ty[n - 1]);
+        ctx.lineTo(w, 0);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.clip();
+
         for (var p = 0; p < peaks.length; ++p) {
-            var e = peaks[p], lo = e - hw, hi = e + hw;
-            if (lo > 0.001) grad.addColorStop(lo, baseColor);
-            grad.addColorStop(Math.max(0, Math.min(1, e)), sunGold);
-            if (hi < 0.999) grad.addColorStop(hi, baseColor);
+            var off = peaks[p].off;
+            var cx = gx0 + off * spanX;
+            // line y at the (fractional) event column, so the core sits on the curve
+            var colF = Math.max(0, Math.min(denom, off * denom));
+            var i0 = Math.min(n - 2, Math.floor(colF)), fr = colF - i0;
+            var cy = ty[i0] + (ty[i0 + 1] - ty[i0]) * fr;
+            var pal = peaks[p].rise ? sunGlow.rise : sunGlow.set;
+            // local slope of the curve at the event: the chord between the bracketing
+            // columns. The bloom is rotated by this so its wide axis lies ALONG the
+            // line and the rise is perpendicular to it — on a steep section it follows
+            // the curve instead of floating as a flat horizontal lens.
+            var slopeAngle = Math.atan2(ty[i0 + 1] - ty[i0], xs[i0 + 1] - xs[i0]);
+
+            // radial ellipse: a circle in a rotated, y-scaled frame → a feathered lens
+            // that hugs the line at its local angle. Gaussian falloff (many stops) so the
+            // rim dissolves smoothly; colour eases core→mid across the inner third;
+            // alpha follows coreA·exp(−feather·r²), the last stop forced transparent.
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.rotate(slopeAngle);
+            ctx.scale(1, ry / rx);
+            var g = ctx.createRadialGradient(0, 0, 0, 0, 0, rx);
+            var GSTOPS = 8;
+            for (var gs = 0; gs <= GSTOPS; ++gs) {
+                var gt = gs / GSTOPS;
+                var cmix = Math.min(1, gt / 0.33);
+                var gcol = [Math.round(pal.core[0] + (pal.mid[0] - pal.core[0]) * cmix),
+                            Math.round(pal.core[1] + (pal.mid[1] - pal.core[1]) * cmix),
+                            Math.round(pal.core[2] + (pal.mid[2] - pal.core[2]) * cmix)];
+                var ga = gs === GSTOPS ? 0 : sunGlowCoreA * Math.exp(-sunGlowFeather * gt * gt);
+                g.addColorStop(gt, rgbaArr(gcol, ga));
+            }
+            ctx.fillStyle = g;
+            ctx.beginPath();
+            ctx.arc(0, 0, rx, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.restore();
         }
-        grad.addColorStop(1, baseColor);
-        return grad;
+        ctx.restore();   // drop the above-line clip
+
+        // soft glowing streak along the line at each event: a horizontal gradient
+        // that's transparent except a bump of `streak` colour around each peak,
+        // stroked wide+faint then narrow+brighter to fake a blurred glow (Canvas
+        // has no feGaussianBlur). Drawn unclipped — it rides the line, not above it.
+        var denom2 = nPts - 1, shw = sunStreakHalfCols / denom2;
+        var sg = ctx.createLinearGradient(gx0, 0, gx1, 0);
+        sg.addColorStop(0, rgbaArr(peaks[0].rise ? sunGlow.rise.streak : sunGlow.set.streak, 0));
+        for (var q = 0; q < peaks.length; ++q) {
+            var e = peaks[q].off, sc = peaks[q].rise ? sunGlow.rise.streak : sunGlow.set.streak;
+            // feathered bell ALONG the line: gaussian alpha across ±shw (same exp(−feather·u²)
+            // profile as the radial) so the warm width fades smoothly instead of as a hard
+            // triangle. Stops outside [0,1] (event scrolled near/off the edge) are dropped —
+            // an out-of-range addColorStop throws and aborts the whole paint; the 0/1 anchor
+            // stops still fade it cleanly.
+            var SSTOPS = 6;
+            for (var ss = -SSTOPS; ss <= SSTOPS; ++ss) {
+                var su = ss / SSTOPS;                          // −1..1 across the streak
+                var so = e + su * shw;
+                if (so <= 0 || so >= 1) continue;
+                var sa = Math.abs(ss) === SSTOPS ? 0
+                       : sunGlowStreakA * Math.exp(-sunGlowFeather * su * su);
+                sg.addColorStop(so, rgbaArr(sc, sa));
+            }
+        }
+        sg.addColorStop(1, rgbaArr(peaks[peaks.length - 1].rise ? sunGlow.rise.streak : sunGlow.set.streak, 0));
+        ctx.save();
+        ctx.lineCap = "round";
+        ctx.strokeStyle = sg;
+        var passes = [[16, 0.32], [8, 0.62], [3.5, 1.0]];   // [width, alpha-scale]: wide+faint halo → mid → tight core, faking a blurred glow
+        for (var s = 0; s < passes.length; ++s) {
+            ctx.globalAlpha = passes[s][1];
+            ctx.lineWidth = passes[s][0];
+            ctx.beginPath();
+            ctx.moveTo(0, ty[0]);
+            ctx.lineTo(xs[0], ty[0]);
+            smooth(ctx, xs, ty);
+            ctx.lineTo(w, ty[n - 1]);
+            ctx.stroke();
+        }
+        ctx.restore();
     }
 
     // Precip colour is CONSISTENT — a fixed rain-blue independent of the chance
@@ -583,7 +712,7 @@ Item {
         id: flickMorphAnim
         target: simple
         property: "dayMorphT"
-        easing.type: Easing.OutCubic
+        easing.type: Easing.OutQuart   // match morphAnim so readout digits settle in sync on a fling too
     }
     // Delayed VALUE-label morph: hold the numbers for lblMorphDelay, then tick them to
     // the new values over lblMorphDur (set per gesture ≥ the curve span, so when the
@@ -612,8 +741,14 @@ Item {
         id: morphAnim
         target: simple
         property: "dayMorphT"
-        duration: 600
-        easing.type: Easing.InOutQuad
+        duration: 600   // overridden per tap in goToDay → pan + morphSettleTail (the settle tail)
+        // Front-loaded (OutQuart) so most of each number's value travel happens
+        // early and it settles into its final rounded digit sooner. With a
+        // back-loaded/symmetric curve (e.g. InOutQuad) a big-delta readout keeps
+        // ticking through digits deep into the slow tail while a small-delta one
+        // settled long ago, so they read as out of sync — this compresses that
+        // gap. Matches flickMorphAnim's decelerating feel.
+        easing.type: Easing.OutQuart
     }
     // any free scroll (drag / wheel) abandons an in-flight curve morph (pill tap OR
     // fling) and its paired pan, returning the curve to following the window directly
@@ -658,15 +793,22 @@ Item {
         simple.dayMorphT = 0;
     }
     function goToDay(idx) {
-        posAnim.stop();
-        // morph the curve IN PLACE from the current shape to the target day's
-        // window while the strip scrolls there
+        // Cancel any in-flight pan/morph (a fling, a wheel notch, or a prior tap):
+        // morphAnim and flickMorphAnim BOTH drive dayMorphT, so a leftover flick
+        // morph would fight this one. (The old version only stopped posAnim.)
+        posAnim.stop(); flickAnim.stop(); morphAnim.stop(); flickMorphAnim.stop(); lblMorphAnim.stop();
         var targetW = Math.round(clampHour(dayFirstSampleIndex(clampPos(idx))));
         _snapMorph(targetW);
-        morphAnim.stop(); morphAnim.from = 0; morphAnim.to = 1; morphAnim.start();
-        posAnim.from = simple.hourPos;
-        posAnim.to = targetW;
-        posAnim.start();
+        // Pan the strip to the target day...
+        posAnim.from = simple.hourPos; posAnim.to = targetW; posAnim.start();
+        // ...while the curve cross-fade and the held-then-ticked value labels outlast
+        // the pan by morphSettleTail — the SAME lingering settle as a wheel/fling
+        // morph (notchMorph), so a pill tap finishes the way a scroll does instead of
+        // stopping dead with the strip.
+        morphAnim.from = 0; morphAnim.to = 1;
+        morphAnim.duration = posAnim.duration + morphSettleTail; morphAnim.start();
+        simple.lblMorphT = 0;
+        lblMorphDur = posAnim.duration + morphSettleTail; lblMorphAnim.start();
     }
     // A mouse-wheel notch is a DISCRETE jump (fixed target), so like a flick it can
     // morph: cross-fade the curve in place to targetW while flickAnim pans the strip
@@ -1026,8 +1168,9 @@ Item {
                                 gray.addColorStop(0, simple.rgba(tCol, 0.22));
                                 gray.addColorStop(1, simple.rgba(tCol, 0.02));
                                 tBandStyle = gray;
-                                // neutral white line, warming to gold where it crosses sunrise/sunset
-                                tLineStyle = simple.sunBloomLine(ctx, gx0, gx1, simple.rgba(tCol, 0.85));
+                                // flat neutral line — the sun warmth now comes from the
+                                // separate radial bloom pass (drawSunBloom), not a recolor.
+                                tLineStyle = simple.rgba(tCol, 0.85);
                             }
 
                             // Draw order matters here. The precip/snow band is
@@ -1126,6 +1269,10 @@ Item {
                             ctx.strokeStyle = pLineStyle;
                             ctx.stroke();
 
+                            // sun bloom: the warm radial glow + line streak at each
+                            // sunrise/sunset, under the crisp line so the line tops its glow.
+                            simple.drawSunBloom(ctx, xs, ty, gx0, gx1, width);
+
                             // temperature line — drawn LAST so the temp curve always
                             // stays on top of the precip wash, even at 100% precip.
                             ctx.beginPath();
@@ -1177,7 +1324,19 @@ Item {
                             // Snow shows on EVERY snowy hour too — a repeated amount
                             // is fresh accumulation (½in + ½in = 1in), not a repeat.
                             readonly property string sText:  (weatherRoot && sVal >= 0.1) ? weatherRoot.snowfallStr(sVal, true) : ""
-                            readonly property bool   pctOn:  pVal >= simple.pctLabelMin || amtOn
+                            // Sticky (hysteresis) visibility: on at pctLabelMin, off only
+                            // once below pctLabelHide; amtOn forces it on. The initializer
+                            // sets the resting state, then onPVal/onAmtOn drive it
+                            // imperatively as the value morphs — so a column straddling the
+                            // 30% line between two hours keeps its label across the seam
+                            // instead of blanking at the ~27% midpoint. See pctLabelHide.
+                            property bool pctOn: pVal >= simple.pctLabelMin || amtOn
+                            function _refreshPctOn() {
+                                pctOn = amtOn || pVal >= simple.pctLabelMin
+                                              || (pctOn && pVal >= simple.pctLabelHide);
+                            }
+                            onPValChanged:  _refreshPctOn()
+                            onAmtOnChanged: _refreshPctOn()
                             readonly property bool   snowOn: sText.length > 0
                             // Liquid precip AMOUNT, shown on every wet hour like snow
                             // (each hour's rain is fresh, not a repeat). Gated on the
@@ -1360,6 +1519,11 @@ Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 width: parent.sz; height: parent.sz
                                 roundToIconSize: false   // exact size; don't snap to 22/32
+                                // sunset glyph recoloured to match its time label (sunGold);
+                                // the full-colour SVG needs isMask to accept a flat tint.
+                                // sunrise keeps its natural artwork (isMask false → colour ignored).
+                                isMask: !parent.modelData.rise
+                                color: simple.sunGold
                                 source: weatherRoot
                                         ? weatherRoot.sunEventIcon(parent.modelData.rise)
                                         : ""
@@ -1367,7 +1531,8 @@ Item {
                             Label {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: weatherRoot ? simple.sunTimeLabel(parent.modelData.ms) : ""
-                                color: simple.sunGold
+                                // each time matches its own glyph: sunrise the icon's gold, sunset sunGold
+                                color: parent.modelData.rise ? simple.sunRiseColor : simple.sunGold
                                 font.bold: true
                                 font.pixelSize: weatherRoot ? weatherRoot.hourlyInfoFontSize : 11
                             }
