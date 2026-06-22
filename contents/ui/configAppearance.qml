@@ -61,28 +61,6 @@ Item {
     property alias cfg_panelFontPercent:   panelFontSpin.value
     property alias cfg_panelColorIcon:     panelColorCheck.checked
 
-    // ── combo popup sizing ──────────────────────────────────────────────
-    // qqc2-desktop-style sizes a ComboBox popup to the (narrow) FIELD width, so
-    // long options elide in the list. Each combo widens its OWN popup with
-    //   popup.width: longestText(model, textRole).length * charPx + padding
-    // Two earlier attempts failed: a popup.width that read+wrote a shared
-    // TextMetrics looped and crashed plasmashell; and a per-combo TextMetrics
-    // assigned to a property couldn't see the combo's `model` (a property-value
-    // object's binding scope is the TextMetrics, not the ComboBox). The
-    // popup.width binding itself DOES run in the ComboBox scope, so `model`
-    // resolves there — we just estimate the width from one calibrated average
-    // character width (pure arithmetic → no measuring loop).
-    TextMetrics { id: charMetrics; text: "Temperature & precipitation" }
-    readonly property real charPx: charMetrics.width / charMetrics.text.length
-    function longestText(items, role) {
-        var s = "";
-        for (var i = 0; i < items.length; ++i) {
-            var t = "" + (role ? items[i][role] : items[i]);
-            if (t.length > s.length) s = t;
-        }
-        return s;
-    }
-
     // shared options for the header-metric dropdowns (id ↔ label)
     readonly property var metricOptions: [
         { text: i18n("None"),                    id: "none"       },
@@ -140,9 +118,7 @@ Item {
         Kirigami.FormLayout {
             Layout.fillWidth: true
 
-            ComboBox {
-                wheelEnabled: false   // don't change value on scroll-over
-                popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+            ConfigComboBox {
                 id: iconPackCombo
                 Kirigami.FormData.label: i18n("Icon pack:")
                 textRole: "text"
@@ -215,72 +191,62 @@ Item {
                     spacing: Kirigami.Units.gridUnit * 2
                     Kirigami.FormLayout {
                         Layout.alignment: Qt.AlignTop
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: dailyDaysSpin
                             Kirigami.FormData.label: i18n("Forecast days:")
                             from: 1
                             to: 7
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: heroSpin
                             Kirigami.FormData.label: i18n("Header icon size:")
                             from: 48
                             to: 200
                             stepSize: 4
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: tempSpin
                             Kirigami.FormData.label: i18n("Temperature font:")
                             from: 24
                             to: 120
                             stepSize: 2
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: condFontSpin
                             Kirigami.FormData.label: i18n("Condition & location font:")
                             from: 12
                             to: 64
                             stepSize: 1
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: dailySpin
                             Kirigami.FormData.label: i18n("Daily tab icon size:")
                             from: 12
                             to: 64
                             stepSize: 2
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: hourlySpin
                             Kirigami.FormData.label: i18n("Hourly icon size:")
                             from: 16
                             to: 80
                             stepSize: 2
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: hourlyTempSpin
                             Kirigami.FormData.label: i18n("Hourly temperature font:")
                             from: 8
                             to: 40
                             stepSize: 1
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: hourlyCardSpin
                             Kirigami.FormData.label: i18n("Hourly card font:")
                             from: 7
                             to: 32
                             stepSize: 1
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: dayStartCombo
                             Kirigami.FormData.label: i18n("Day starts at:")
                             textRole: "text"
@@ -296,9 +262,7 @@ Item {
                             }
                             onActivated: page.cfg_detailDayStartHour = model[currentIndex].value
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: forecastAnimCombo
                             Kirigami.FormData.label: i18n("Animation:")
                             textRole: "text"
@@ -347,9 +311,7 @@ Item {
                                 ToolTip.text: i18n("Shows the main metric, or the fallback on hours the main one has nothing to show.")
                             }   // soak up remaining width so the row never dictates it
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: hourMetric1
                             Kirigami.FormData.label: i18n("Line 1:")
                             textRole: "text"
@@ -357,9 +319,7 @@ Item {
                             Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1)
                             onActivated: page.cfg_hourlyMetric1 = page.hourlyMetricOptions[currentIndex].id
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: hourMetric1Fallback
                             Kirigami.FormData.label: i18n("Fallback:")
                             textRole: "text"
@@ -367,9 +327,7 @@ Item {
                             Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1Fallback)
                             onActivated: page.cfg_hourlyMetric1Fallback = page.hourlyMetricOptions[currentIndex].id
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: hourMetric2
                             Kirigami.FormData.label: i18n("Line 2:")
                             textRole: "text"
@@ -377,9 +335,7 @@ Item {
                             Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2)
                             onActivated: page.cfg_hourlyMetric2 = page.hourlyMetricOptions[currentIndex].id
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: hourMetric2Fallback
                             Kirigami.FormData.label: i18n("Fallback:")
                             textRole: "text"
@@ -410,17 +366,14 @@ Item {
                             }
                             Item { Layout.fillWidth: true }
                         }
-                        SpinBox {
-                            wheelEnabled: false   // don't change value on scroll-over
+                        ConfigSpinBox {
                             id: detHeaderFontSpin
                             Kirigami.FormData.label: i18n("Font:")
                             from: 7
                             to: 32
                             stepSize: 1
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: detMetric1
                             Kirigami.FormData.label: i18n("Line 1:")
                             textRole: "text"
@@ -428,9 +381,7 @@ Item {
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric1)
                             onActivated: page.cfg_headerMetric1 = page.detailMetricOptions[currentIndex].id
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: detMetric2
                             Kirigami.FormData.label: i18n("Line 2:")
                             textRole: "text"
@@ -438,9 +389,7 @@ Item {
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric2)
                             onActivated: page.cfg_headerMetric2 = page.detailMetricOptions[currentIndex].id
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: detMetric3
                             Kirigami.FormData.label: i18n("Line 3:")
                             textRole: "text"
@@ -448,9 +397,7 @@ Item {
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric3)
                             onActivated: page.cfg_headerMetric3 = page.detailMetricOptions[currentIndex].id
                         }
-                        ComboBox {
-                            wheelEnabled: false   // don't change value on scroll-over
-                            popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                        ConfigComboBox {
                             id: detMetric4
                             Kirigami.FormData.label: i18n("Line 4:")
                             textRole: "text"
@@ -476,16 +423,13 @@ Item {
             ScrollView {
                 contentWidth: availableWidth
                 Kirigami.FormLayout {
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpleDaysSpin
                         Kirigami.FormData.label: i18n("Forecast days:")
                         from: 1
                         to: 7
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: sampleStepCombo
                         Kirigami.FormData.label: i18n("Graph detail:")
                         textRole: "text"
@@ -497,49 +441,42 @@ Item {
                         Component.onCompleted: currentIndex = page.cfg_simpleHourly ? 1 : 0
                         onActivated: page.cfg_simpleHourly = model[currentIndex].value
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpleHeroSpin
                         Kirigami.FormData.label: i18n("Header icon size:")
                         from: 32
                         to: 160
                         stepSize: 4
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpleTempSpin
                         Kirigami.FormData.label: i18n("Temperature font:")
                         from: 24
                         to: 120
                         stepSize: 2
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpleIconSpin
                         Kirigami.FormData.label: i18n("Hourly icon size:")
                         from: 12
                         to: 64
                         stepSize: 2
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpleHourSpin
                         Kirigami.FormData.label: i18n("Hour font:")
                         from: 7
                         to: 32
                         stepSize: 1
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpleGraphTempSpin
                         Kirigami.FormData.label: i18n("Graph temperature font:")
                         from: 8
                         to: 40
                         stepSize: 1
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: simpleAnimCombo
                         Kirigami.FormData.label: i18n("Animation:")
                         textRole: "text"
@@ -559,9 +496,7 @@ Item {
                             page.cfg_simpleHeaderAnim    = model[currentIndex].header;
                         }
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: graphColorCombo
                         Kirigami.FormData.label: i18n("Graph coloring:")
                         // index maps directly to graphColorMode (0..3)
@@ -577,17 +512,14 @@ Item {
                         Kirigami.FormData.label: i18n("Weather Elements (up to 4)")
                         Kirigami.FormData.isSection: true
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: simpHeaderFontSpin
-                        Kirigami.FormData.label: i18n("Weather Elements font:")
+                        Kirigami.FormData.label: i18n("Font:")
                         from: 7
                         to: 32
                         stepSize: 1
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: simpMetric1
                         Kirigami.FormData.label: i18n("Line 1:")
                         textRole: "text"
@@ -595,9 +527,7 @@ Item {
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric1)
                         onActivated: page.cfg_simpleHeaderMetric1 = page.metricOptions[currentIndex].id
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: simpMetric2
                         Kirigami.FormData.label: i18n("Line 2:")
                         textRole: "text"
@@ -605,9 +535,7 @@ Item {
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric2)
                         onActivated: page.cfg_simpleHeaderMetric2 = page.metricOptions[currentIndex].id
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: simpMetric3
                         Kirigami.FormData.label: i18n("Line 3:")
                         textRole: "text"
@@ -615,9 +543,7 @@ Item {
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric3)
                         onActivated: page.cfg_simpleHeaderMetric3 = page.metricOptions[currentIndex].id
                     }
-                    ComboBox {
-                        wheelEnabled: false   // don't change value on scroll-over
-                        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+                    ConfigComboBox {
                         id: simpMetric4
                         Kirigami.FormData.label: i18n("Line 4:")
                         textRole: "text"
@@ -642,16 +568,14 @@ Item {
             ScrollView {
                 contentWidth: availableWidth
                 Kirigami.FormLayout {
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: panelIconSpin
                         Kirigami.FormData.label: i18n("Panel icon size (% of height):")
                         from: 50
                         to: 200
                         stepSize: 5
                     }
-                    SpinBox {
-                        wheelEnabled: false   // don't change value on scroll-over
+                    ConfigSpinBox {
                         id: panelFontSpin
                         Kirigami.FormData.label: i18n("Panel temperature font (% of height):")
                         from: 20

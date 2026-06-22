@@ -19,26 +19,10 @@ Kirigami.FormLayout {
     property alias  cfg_showAlerts: alertsCheck.checked
     property int    cfg_minAlertSeverity
 
-    // Widen the combo popup to its longest option (the desktop style otherwise
-    // clips it to the narrow field). Estimate from one calibrated average char
-    // width — see configAppearance.qml for the full rationale. The calibration
-    // TextMetrics lives inside the ComboBox below (a bare child here would be
-    // mis-treated as a FormLayout row).
-    readonly property real charPx: charMetrics.width / charMetrics.text.length
-    function longestText(items, role) {
-        var s = "";
-        for (var i = 0; i < items.length; ++i) {
-            var t = "" + (role ? items[i][role] : items[i]);
-            if (t.length > s.length) s = t;
-        }
-        return s;
-    }
-
     // breathing room so the settings don't sit flush against the top
     Item { implicitHeight: Kirigami.Units.gridUnit }
 
-    SpinBox {
-        wheelEnabled: false   // don't change value on scroll-over
+    ConfigSpinBox {
         id: refreshSpin
         Kirigami.FormData.label: i18n("Refresh interval (minutes):")
         from: 1
@@ -61,9 +45,7 @@ Kirigami.FormLayout {
             ToolTip.text: i18n("Weather alerts come from the KDE Public Alert Server, not from government servers directly. Agencies like the NWS publish their official warnings as open CAP feeds. KDE's open-source server continuously aggregates hundreds of those feeds worldwide into one place, and the widget just asks for it. So you get the official alerts without contacting or revealing yourself to every agency that issues them.")
         }
     }
-    ComboBox {
-        wheelEnabled: false   // don't change value on scroll-over
-        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
+    ConfigComboBox {
         id: alertLevelCombo
         Kirigami.FormData.label: i18n("Show alerts at or above:")
         enabled: alertsCheck.checked   // only meaningful when alerts are on
@@ -81,10 +63,7 @@ Kirigami.FormLayout {
         }
         onActivated: page.cfg_minAlertSeverity = model[currentIndex].value
     }
-    ComboBox {
-        wheelEnabled: false   // don't change value on scroll-over
-        popup.width: page.longestText(model, textRole).length * page.charPx + Kirigami.Units.gridUnit * 3
-        TextMetrics { id: charMetrics; text: "Temperature & precipitation" }
+    ConfigComboBox {
         id: unitCombo
         Kirigami.FormData.label: i18n("Temperature unit:")
         textRole: "text"
