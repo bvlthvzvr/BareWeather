@@ -39,19 +39,25 @@ Kirigami.Icon {
         id: tip
         parent: indicator
         delay: 0   // timing is handled by the timers above
-        // The popup sizes itself to the content's IMPLICIT width, so capping the
-        // Label's width does nothing — cap the wrapper's implicitWidth instead,
-        // then the Label wraps within it.
+        // The popup sizes itself to the content's IMPLICIT size, so cap the wrapper:
+        // width caps the wrap, height caps the box — a long alert scrolls inside the
+        // ScrollView (wheel works because the pointer is over the hovered tooltip)
+        // instead of running off-screen.
         contentItem: Item {
             implicitWidth: Math.min(tipLabel.implicitWidth, Kirigami.Units.gridUnit * 19)
-            implicitHeight: tipLabel.implicitHeight
+            implicitHeight: Math.min(tipLabel.implicitHeight, Kirigami.Units.gridUnit * 22)
             HoverHandler { id: tipHov }
-            Label {
-                id: tipLabel
-                width: parent.width
-                text: weatherRoot ? weatherRoot.alertDetail() : ""
-                color: tip.palette.toolTipText
-                wrapMode: Text.WordWrap
+            ScrollView {
+                id: tipScroll
+                anchors.fill: parent
+                contentWidth: availableWidth   // vertical scroll only
+                Label {
+                    id: tipLabel
+                    width: tipScroll.availableWidth
+                    text: weatherRoot ? weatherRoot.alertDetail() : ""
+                    color: tip.palette.toolTipText
+                    wrapMode: Text.WordWrap
+                }
             }
         }
     }

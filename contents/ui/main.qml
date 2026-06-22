@@ -130,31 +130,31 @@ PlasmoidItem {
         }
         return t;
     }
-    // full hover text for the "!" indicator: the top alert's headline + detailed
-    // description, then a one-line list of any other active alerts
+    // NWS descriptions are hard-wrapped at ~65 cols; every wrap is a \n. Join those
+    // continuation lines back into flowing text (the Label wraps it), but keep "*"/"-"
+    // bullet lines on their own line. Other agencies' single-line text passes through.
+    function _flowAlert(t) {
+        var out = "", lines = t.replace(/\r/g, "").split("\n");
+        for (var i = 0; i < lines.length; ++i) {
+            var ln = lines[i].trim();
+            if (!ln) continue;
+            out += (out ? (/^[*\-]/.test(ln) ? "\n" : " ") : "") + ln;
+        }
+        return out;
+    }
+    // full alert text for the hover tooltip: top alert's headline + description +
+    // instruction, then every other active alert as a one-liner. No caps — the
+    // point-in-polygon filter keeps the set small (only alerts covering us).
     function alertDetail() {
         if (!displayAlerts.length) return "";
         var top = topAlert;
         var s = top.headline;
-        if (top.description) {
-            // alert descriptions can be many paragraphs — cap so the hover tooltip
-            // stays a sane size (collapse blank lines, trim, ellipsise)
-            var desc = top.description.replace(/\n\s*\n/g, "\n").trim();
-            if (desc.length > 300) desc = desc.substring(0, 300).trim() + "…";
-            s += "\n\n" + desc;
-        }
+        if (top.description) s += "\n\n" + _flowAlert(top.description);
+        if (top.instruction) s += "\n\n" + _flowAlert(top.instruction);
         if (displayAlerts.length > 1) {
             s += "\n\n" + i18n("Also active:");
-            // cap the list so a dense area (e.g. many overlapping zones) can't
-            // grow the tooltip so tall it repositions over the indicator and
-            // flickers the hover.
-            var shown = 0, more = 0;
-            for (var i = 0; i < displayAlerts.length; ++i) {
-                if (displayAlerts[i] === top) continue;
-                if (shown < 5) { s += "\n• " + alertText(displayAlerts[i]); shown++; }
-                else more++;
-            }
-            if (more > 0) s += "\n" + i18n("…and %1 more", more);
+            for (var i = 0; i < displayAlerts.length; ++i)
+                if (displayAlerts[i] !== top) s += "\n• " + alertText(displayAlerts[i]);
         }
         return s;
     }
@@ -710,6 +710,18 @@ PlasmoidItem {
         var m = s.match(new RegExp("<" + tag + "\\b[^>]*>([\\s\\S]*?)<\\/" + tag + ">"));
         return m ? root._xmlUnescape(m[1].trim()) : "";
     }
+    // ray-cast point-in-polygon. polyStr is a CAP <polygon> ("lat,lon lat,lon …").
+    // Runs locally on our exact config coords — nothing is sent.
+    function _pointInRing(lon, lat, polyStr) {
+        var pts = polyStr.replace(/<\/?polygon>/g, "").trim().split(/\s+/);
+        var c = false, n = pts.length;
+        for (var i = 0, j = n - 1; i < n; j = i++) {
+            var pi = pts[i].split(","), pj = pts[j].split(",");   // CAP order = lat,lon
+            var yi = +pi[0], xi = +pi[1], yj = +pj[0], xj = +pj[1];
+            if (((yi > lat) !== (yj > lat)) && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi)) c = !c;
+        }
+        return c;
+    }
     function _parseCapAlert(xml) {
         var infos = xml.match(/<info\b[\s\S]*?<\/info>/g);
         if (!infos || !infos.length) return null;
@@ -721,6 +733,19 @@ PlasmoidItem {
             if (lang === "en" && !english) english = infos[i];
         }
         var blk = chosen || english || infos[0];
+        // Local point-in-polygon filter: if the block carries polygon geometry, drop
+        // the alert unless our EXACT point is inside one. Kills neighbour-area false
+        // positives (a watch clipping the coarse query box). Geocode-only blocks have
+        // no polygon to test → fall through and stay (box behaviour, can't do better).
+        var polys = blk.match(/<polygon>[\s\S]*?<\/polygon>/g);
+        if (polys && polys.length) {
+            var plat = Plasmoid.configuration.latitude;
+            var plon = Plasmoid.configuration.longitude;
+            var inAny = false;
+            for (var p = 0; p < polys.length; ++p)
+                if (root._pointInRing(plon, plat, polys[p])) { inAny = true; break; }
+            if (!inAny) return null;
+        }
         var ev = root._capTag(blk, "event");
         return {
             event:       ev,
