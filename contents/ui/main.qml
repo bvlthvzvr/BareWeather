@@ -845,16 +845,20 @@ PlasmoidItem {
         if (code === 2)                    return night ? "wi-night-alt-partly-cloudy" : "wi-day-cloudy";
         if (code === 3)                    return night ? "wi-night-cloudy" : "wi-cloudy";
         if (code === 45 || code === 48)    return night ? "wi-night-fog" : "wi-day-fog";
+        // Daytime precip uses SUN-FREE stems (wi-rain/snow/sleet/thunderstorm, derived
+        // by stripping the sun from the basmilius wi-day-* glyphs) so the panel/static
+        // icon matches the sunless animated WebP heroes — and so a 100%-overcast rain
+        // hour doesn't show a sun. Night keeps wi-night-alt-* (moon matches the night WebP).
         // freezing drizzle/rain (56/57/66/67) — the sleet glyph (rain + snowflakes)
         if (code === 56 || code === 57 || code === 66 || code === 67)
-            return night ? "wi-night-alt-sleet" : "wi-day-sleet";
-        if (code >= 51 && code <= 67)      return night ? "wi-night-alt-rain" : "wi-day-rain";
-        if (code >= 80 && code <= 82)      return night ? "wi-night-alt-rain" : "wi-day-rain";
+            return night ? "wi-night-alt-sleet" : "wi-sleet";
+        if (code >= 51 && code <= 67)      return night ? "wi-night-alt-rain" : "wi-rain";
+        if (code >= 80 && code <= 82)      return night ? "wi-night-alt-rain" : "wi-rain";
         // snow — continuous (71–77) or showers (85/86); overcast daytime → no-sun glyph
         if ((code >= 71 && code <= 77) || code === 85 || code === 86)
             return night ? "wi-night-alt-snow"
-                         : (isOvercastDaySnow(code, day, cloudCover) ? "wi-overcast-snow" : "wi-day-snow");
-        if (code >= 95)                    return night ? "wi-night-alt-thunderstorm" : "wi-day-thunderstorm";
+                         : (isOvercastDaySnow(code, day, cloudCover) ? "wi-overcast-snow" : "wi-snow");
+        if (code >= 95)                    return night ? "wi-night-alt-thunderstorm" : "wi-thunderstorm";
         return "wi-cloudy";
     }
     // ── WMO weather code → freedesktop "weather-*" name (System theme pack) ─
@@ -943,11 +947,16 @@ PlasmoidItem {
     // So the two paths need DIFFERENT factors to land the sun at the same displayed
     // size (~0.90 of the box): static gets 1.20 above, animated gets 1.0 here. Tune
     // the animated sun here, the static sun in staticIconZoom — they no longer share.
+    // Per-condition zoom so each animated WebP's artwork fills the box to ~the sun's
+    // extent. The art frames its subjects at different sizes: sun/moon nearly fill the
+    // 160px frame (~0.90/0.86), while clouds & precip sit smaller (~0.75–0.79) and fog
+    // smallest (~0.72). Factors measured from each frame-0 opaque bbox (sun = reference).
     function iconScale(code, day) {
         if (iconPackId !== "basmilius") return 1.0;
-        if (day !== 0 && (code === 0 || code === 1)) return 1.0;    // sunny: WebP already ~0.90 fill
-        if (code === 45 || code === 48) return 1.15;                // fog: match the larger static fog
-        return 1.0;
+        if (code === 0 || code === 1)   return 1.0;    // sun/moon: already ~fill the frame (reference)
+        if (code === 45 || code === 48) return 1.25;   // fog: sits smallest in its frame
+        if (code === 3)                 return 1.15;   // overcast cloud: wide but a touch smaller
+        return 1.20;                                   // partly-cloudy / rain / snow / sleet / thunder (~0.75 fill)
     }
 
     // Animated hero (WebP baked from Meteocons) for the header, or "" when the

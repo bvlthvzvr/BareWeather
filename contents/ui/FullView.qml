@@ -91,7 +91,10 @@ Item {
 
     // Animated hero source for the current condition ("" → use static icon).
     // Suppressed when forecast animation is set to None (fullHeaderAnim false).
-    readonly property string _heroAnim: (weatherRoot && weatherRoot.fullHeaderAnim)
+    // Always resolve the WebP so the hero shows the SAME artwork whether animation is on
+    // or off (frozen frame 0 when off — see `playing` below). Static SVG only for
+    // conditions heroAnim has no WebP for. Keeps the hero consistent with the cards.
+    readonly property string _heroAnim: (weatherRoot)
         ? weatherRoot.heroAnim(weatherRoot.weatherCode, weatherRoot.isDay, weatherRoot.cloudCover) : ""
 
     // bumping this re-deals the hourly cards (entrance animation). Fires on
@@ -124,36 +127,21 @@ Item {
         anchors.rightMargin: Math.round(full.pad * 0.35)
         spacing: 0
         z: 10
-        ToolButton {
-            width: Math.round(Kirigami.Units.gridUnit * 0.9); height: width
-            flat: true
+        DotButton {
             // switch to the simple (graph) layout
-            icon.name: "office-chart-line"
-            icon.width: Math.round(Kirigami.Units.gridUnit * 0.6)
-            icon.height: Math.round(Kirigami.Units.gridUnit * 0.6)
             onClicked: if (weatherRoot) weatherRoot.toggleLayout()
             ToolTip.visible: hovered
             ToolTip.text: i18n("Switch to graph layout")
         }
-        ToolButton {
+        DotButton {
             id: pinButton
-            width: Math.round(Kirigami.Units.gridUnit * 0.9); height: width
-            flat: true
             checkable: true
-            icon.name: "window-pin"
-            icon.width: Math.round(Kirigami.Units.gridUnit * 0.6)
-            icon.height: Math.round(Kirigami.Units.gridUnit * 0.6)
             Component.onCompleted: checked = (weatherRoot ? weatherRoot.keepOpen : false)
             onToggled: if (weatherRoot) weatherRoot.setKeepOpen(checked)
             ToolTip.visible: hovered
             ToolTip.text: checked ? i18n("Unpin window") : i18n("Keep window open")
         }
-        ToolButton {
-            width: Math.round(Kirigami.Units.gridUnit * 0.9); height: width
-            flat: true
-            icon.name: "view-refresh"
-            icon.width: Math.round(Kirigami.Units.gridUnit * 0.6)
-            icon.height: Math.round(Kirigami.Units.gridUnit * 0.6)
+        DotButton {
             enabled: weatherRoot && !weatherRoot.loading
             onClicked: if (weatherRoot) weatherRoot.fetchWeather()
             ToolTip.visible: hovered
@@ -257,7 +245,8 @@ Item {
                     anchors.fill: parent
                     visible: full._heroAnim.length > 0
                     source: full._heroAnim
-                    playing: visible
+                    // animate only when forecast animation is on; otherwise hold frame 0
+                    playing: visible && weatherRoot && weatherRoot.fullHeaderAnim
                     cache: false
                     smooth: true
                     mipmap: true
@@ -424,8 +413,10 @@ Item {
                             Layout.preferredWidth:  weatherRoot ? weatherRoot.dailyIconSize : 24
                             Layout.preferredHeight: weatherRoot ? weatherRoot.dailyIconSize : 24
 
-                            // animated source when enabled (daily tabs always use the day variant)
-                            readonly property string animSrc: (weatherRoot && weatherRoot.animatedDailyIcons)
+                            // Always resolve the WebP so the static (anim-off) tab matches the animated
+                            // one and the hourly cards — frozen frame 0 when off (playing gated below).
+                            // Daily tabs always use the day variant. Falls back to SVG only when "".
+                            readonly property string animSrc: (weatherRoot && dayTab.modelData)
                                 ? weatherRoot.heroAnim(dayTab.modelData.code, 1) : ""
                             // per-condition fine-tune (sunny trimmed); daily is always day variant
                             readonly property real iScale: weatherRoot ? weatherRoot.iconScale(dayTab.modelData.code, 1) : 1
@@ -445,7 +436,8 @@ Item {
                                 height: width
                                 visible: dayIcon.animSrc.length > 0
                                 source: dayIcon.animSrc
-                                playing: visible
+                                // animate only when daily-icon animation is on; else hold frame 0
+                                playing: visible && weatherRoot && weatherRoot.animatedDailyIcons
                                 cache: false
                                 smooth: true
                                 mipmap: true
@@ -737,8 +729,11 @@ Item {
 
                                         // probability-aware code: a likely-rain hour shows rain even if the code reads cloudy
                                         readonly property int iconCode: weatherRoot ? weatherRoot.precipAwareCode(modelData.code, modelData.precip, modelData.precipAmt, modelData.snow) : modelData.code
-                                        // animated source when enabled (night-aware per hour)
-                                        readonly property string animSrc: (weatherRoot && weatherRoot.animatedHourlyIcons)
+                                        // Always resolve the WebP so the static (anim-off) icon is the
+                                        // SAME artwork as the animated one — just frozen (playing gated
+                                        // below on animatedHourlyIcons). Falls back to the static SVG only
+                                        // for conditions heroAnim has no WebP for (returns "").
+                                        readonly property string animSrc: (weatherRoot && modelData)
                                             ? weatherRoot.heroAnim(hrIcon.iconCode, modelData.day, modelData.cloud) : ""
                                         // per-condition fine-tune (sunny trimmed)
                                         readonly property real iScale: weatherRoot ? weatherRoot.iconScale(hrIcon.iconCode, modelData.day) : 1
@@ -758,8 +753,10 @@ Item {
                                             height: width
                                             visible: hrIcon.animSrc.length > 0
                                             source: hrIcon.animSrc
-                                            // only decode on-screen cards, and freeze while scrolling
-                                            playing: visible && card.inView && !full.scrolling
+                                            // animate only when the option is on; otherwise hold frame 0
+                                            // (a static poster matching the animated art). Decode only
+                                            // on-screen cards, and freeze while scrolling.
+                                            playing: weatherRoot && weatherRoot.animatedHourlyIcons && visible && card.inView && !full.scrolling
                                             cache: false
                                             smooth: true
                                             mipmap: true

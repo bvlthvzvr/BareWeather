@@ -297,6 +297,10 @@ Item {
     }
     readonly property int lblMorphDelay: 220   // numbers hold this long before ticking
     property int lblMorphDur: 600              // then morph over this (set per gesture)
+    // The value labels get a SHORTER settle tail than the curve (morphSettleTail) so the
+    // numbers finish ticking a touch sooner. Stays ≥ (morphSettleTail − lblMorphDelay) or
+    // the lblMorphActive→curTemps handoff would snap (curTemps isn't at morphTo yet).
+    readonly property int lblSettleTail: 200
     // sunrise + sunset instants across the forecast days: {ms, rise}. Drives both
     // the warm bloom the temp line picks up at a crossing AND the glyph pinned above
     // it. Local-time ISO strings parse the same way the sample times do
@@ -774,7 +778,7 @@ Item {
         flickMorphAnim.stop(); flickMorphAnim.from = 0; flickMorphAnim.to = 1;
         flickMorphAnim.duration = dur + morphSettleTail; flickMorphAnim.start();
         simple.lblMorphT = 0; lblMorphAnim.stop();
-        lblMorphDur = dur + morphSettleTail; lblMorphAnim.start();
+        lblMorphDur = dur + lblSettleTail; lblMorphAnim.start();
     }
     // Snapshot the current curve columns as the morph SOURCE and the window at targetW
     // as the morph TARGET, then arm dayMorphT at 0. Shared by the day-pill morph
@@ -808,7 +812,7 @@ Item {
         morphAnim.from = 0; morphAnim.to = 1;
         morphAnim.duration = posAnim.duration + morphSettleTail; morphAnim.start();
         simple.lblMorphT = 0;
-        lblMorphDur = posAnim.duration + morphSettleTail; lblMorphAnim.start();
+        lblMorphDur = posAnim.duration + lblSettleTail; lblMorphAnim.start();
     }
     // A mouse-wheel notch is a DISCRETE jump (fixed target), so like a flick it can
     // morph: cross-fade the curve in place to targetW while flickAnim pans the strip
@@ -823,7 +827,7 @@ Item {
         flickMorphAnim.stop(); flickMorphAnim.from = 0; flickMorphAnim.to = 1;
         flickMorphAnim.duration = dur + morphSettleTail; flickMorphAnim.start();
         simple.lblMorphT = 0; lblMorphAnim.stop();
-        lblMorphDur = dur + morphSettleTail; lblMorphAnim.start();
+        lblMorphDur = dur + lblSettleTail; lblMorphAnim.start();
     }
 
     // toolbar buttons floated at the very top-right corner (mirrors FullView)
@@ -834,35 +838,20 @@ Item {
         anchors.rightMargin: Math.round(simple.pad * 0.35)
         spacing: 0
         z: 10
-        ToolButton {
-            width: Math.round(Kirigami.Units.gridUnit * 0.9); height: width
-            flat: true
+        DotButton {
             // switch to the detailed (regular) layout
-            icon.name: "view-list-details"
-            icon.width: Math.round(Kirigami.Units.gridUnit * 0.6)
-            icon.height: Math.round(Kirigami.Units.gridUnit * 0.6)
             onClicked: if (weatherRoot) weatherRoot.toggleLayout()
             ToolTip.visible: hovered
             ToolTip.text: i18n("Switch to detailed layout")
         }
-        ToolButton {
-            width: Math.round(Kirigami.Units.gridUnit * 0.9); height: width
-            flat: true
+        DotButton {
             checkable: true
-            icon.name: "window-pin"
-            icon.width: Math.round(Kirigami.Units.gridUnit * 0.6)
-            icon.height: Math.round(Kirigami.Units.gridUnit * 0.6)
             Component.onCompleted: checked = (weatherRoot ? weatherRoot.keepOpen : false)
             onToggled: if (weatherRoot) weatherRoot.setKeepOpen(checked)
             ToolTip.visible: hovered
             ToolTip.text: checked ? i18n("Unpin window") : i18n("Keep window open")
         }
-        ToolButton {
-            width: Math.round(Kirigami.Units.gridUnit * 0.9); height: width
-            flat: true
-            icon.name: "view-refresh"
-            icon.width: Math.round(Kirigami.Units.gridUnit * 0.6)
-            icon.height: Math.round(Kirigami.Units.gridUnit * 0.6)
+        DotButton {
             enabled: weatherRoot && !weatherRoot.loading
             onClicked: if (weatherRoot) weatherRoot.fetchWeather()
             ToolTip.visible: hovered
@@ -1567,7 +1556,11 @@ Item {
                             // probability-aware code: a likely-rain hour shows rain even if the code reads cloudy
                             readonly property int iconCode: (weatherRoot && modelData)
                                 ? weatherRoot.precipAwareCode(modelData.code, modelData.precip, modelData.precipAmt, modelData.snow) : 0
-                            readonly property string animSrc: (weatherRoot && weatherRoot.simpleAnimatedIcons && modelData)
+                            // Always resolve the WebP so the static (non-animated) graph icon is
+                            // the SAME artwork as the animated card icon — just frozen (playing
+                            // gated below on simpleAnimatedIcons). Falls back to the static SVG only
+                            // for conditions heroAnim has no WebP for (returns ""), matching the card.
+                            readonly property string animSrc: (weatherRoot && modelData)
                                 ? weatherRoot.heroAnim(hrIconC.iconCode, modelData.day, modelData.cloud) : ""
                             // per-condition fine-tune (sunny trimmed); guard null model
                             readonly property real iScale: (weatherRoot && hrIconC.modelData)
@@ -1588,7 +1581,9 @@ Item {
                                 height: width
                                 visible: hrIconC.animSrc.length > 0
                                 source: hrIconC.animSrc
-                                playing: visible && !simple.scrolling
+                                // animate only when the graph's hourly-anim option is on; otherwise
+                                // hold frame 0 (a static poster that matches the card's animated art)
+                                playing: weatherRoot && weatherRoot.simpleAnimatedIcons && visible && !simple.scrolling
                                 cache: false
                                 smooth: true
                                 mipmap: true
