@@ -23,7 +23,8 @@ A simple, interactive weather widget that minds its own business. For KDE Plasma
 - **Precipitation Curve** - A separate curve in blue representing the precipitation chance throughout the days. The curve also shows the precipitation amount when it detects it. The curve tints toward white when there is snow. 
 - **Day Tabs** - Switching to a different day and the curve morphs to that day's shape. 
 - **Timeline** - Pick how dense the curve is between displaying every hour or every 2 hours. 
-<img width="600" height="352" alt="untitled" src="https://github.com/user-attachments/assets/a13a3c25-562a-436a-8d5f-eda71c840548" />
+<img width="758" height="458" alt="untitled" src="https://github.com/user-attachments/assets/7e58dc9b-17cc-4c72-aeb8-d4ded116bd6b" />
+
 
 
 
@@ -55,21 +56,23 @@ Pared to the bare necessities. **No account, no API key, nor does it offer other
 
 ## Language
 
-Bare Weather is only in English for now, it would be wonderful to see it in yours! Translation is just about as easy as filling out a form. No coding required.
+If the widget earned a spot on your panel, and you would like to add to your language, translation is just about as easy as filling out a form. No coding needed.
 1. Download the template [`po/weather.pot`](https://github.com/bvlthvzvr/BareWeather/blob/main/po/weather.pot)
-2. Rename it to your language , ex `de.po` for German, `fr.po` for French. Then fill in the translations. 
+2. Rename it to your language , ex `de.po` for German, `fr.po` for French. Then fill in the translations. Compress it to a zip folder.
 3. Send it back by [Email](mailto:bareweather.recreate814@silomails.com) or by [opening an issue](https://github.com/bvlthvzvr/BareWeather/issues/new) and attaching the file. Otherwise Open PR.
 
-You'll be credited for your work!
+### Translators
 
+Grateful for everyone helping the widget speak your language!
+
+🇩🇪 German - [AbeGasame](https://github.com/AbeGasame)
 
 ## Install
 
 ### KDE Store
 
-Right-click your panel or desktop → **Add Widgets…** → **Get New Widgets** →
-**Download New Plasma Widgets**, then search for **Bare Weather** and click
-**Install**.
+Right-click your panel or desktop -> **Add Widgets…** -> **Get New Widgets** ->
+**Download New Plasma Widgets**, then search for **Bare Weather** 
 
 ### From a release file
 
@@ -81,28 +84,10 @@ Right-click your panel or desktop → **Add Widgets…** → **Get New Widgets**
      kpackagetool6 --type Plasma/Applet --install bare-weather.plasmoid
      ```
 
-### From source
-
-```bash
-git clone https://github.com/bvlthvzvr/BareWeather.git
-cd BareWeather
-kpackagetool6 --type Plasma/Applet --install .
-```
-
-
-### Update / remove
-
-```bash
-# update (after pulling a newer version)
-kpackagetool6 --type Plasma/Applet --upgrade .
-
-# remove
-kpackagetool6 --type Plasma/Applet --remove org.bvlthvzvr.weather
-```
 
 ## Credits
 
-- Card layout is inspired by [Advanced Weather Widget](https://github.com/pnedyalkov91/advanced-weather-widget)
+- Bare Weather is inspire by [Advanced Weather Widget](https://github.com/pnedyalkov91/advanced-weather-widget)
 - Weather data from [Open-Meteo](https://open-meteo.com) (CC-BY 4.0).
 - Icons derived from [Meteocons](https://github.com/basmilius/weather-icons) by
   Bas Milius (MIT). See `contents/icons/*/ATTRIBUTION.md` for details.
