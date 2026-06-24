@@ -9,8 +9,11 @@ A simple, interactive weather widget that minds its own business. For KDE Plasma
 - **Color Coded headers** - Weather element headers are color coded with the conditions and synced to the hour as you scroll or drag through the timeline, or to the day as you switch day tabs.  
 - **Daily Forecast** - Glance across the tabs and the icons give you the gist of the day's condition and temperature. Choose your starting hour between 12AM or 6AM when switching day tabs so the timeline opens closer to when you start the day.
 - **Hourly cards** - Scroll or drag through the whole forecast, the day tabs keep pace.  Cards are color coded when there is snow, rain, or a mixture of both.
+<img width="628" height="456" alt="untitled33" src="https://github.com/user-attachments/assets/ac8539cc-4074-48bc-a53b-68ce5523c393" />
 
-<img width="600" height="451" alt="untitled2" src="https://github.com/user-attachments/assets/2e3c201e-f139-47a4-a69b-d8afc05337c6" />
+
+
+
 
 
 
@@ -39,7 +42,7 @@ Pared to the bare necessities. **No account, no API key, nor does it offer other
 | Service                                                                                                | Purpose                                                         | When                                                                                     |
 | ------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | **Open-Meteo** (`api.open-meteo.com`)<br><br>**Open-Meteo geocoding** (`geocoding-api.open-meteo.com`) | the weather itself<br><br>turning a place name into coordinates | **always**, once you've set a location<br><br>**only** when you use the **Search** field |
-| **KDE FOSS Public Alert Server** (`alerts.kde.org`)                                                    | severe-weather alerts (worldwide)                               | **only** if you turn *Weather alerts* on                                                 |
+| **KDE FOSS Public Alert Server** (`alerts.kde.org`)                                                    | weather alerts (worldwide)                               | **only** if you turn *Weather alerts* on                                                 |
 | **Mullvad** (`am.i.mullvad.net`)                                                                       | guessing your location from your IP                                 | **only** if you use *Auto-detect*                                                        |
 
 
@@ -47,7 +50,7 @@ Pared to the bare necessities. **No account, no API key, nor does it offer other
 - **Auto-detect and alerts are both off by default**. The widget makes no IP-geolocation call and no alert request at all until you use them.
 - The only IP-geolocation provider is Mullvad, picked because it's a privacy
   company with a public no-logging stance.
-- Weather alerts come from KDE Public Alert Server, a free and open-source aggregator. **It collects official severe weather warnings in standard CAP format from agencies around the world into one place, so you get worldwide alerts without ever contacting, or exposing yourself to, each individual agency.**
+- Weather alerts come from KDE Public Alert Server. **It collects official severe weather warnings in standard CAP format from agencies around the world into one place, so you get worldwide alerts without ever contacting, or exposing yourself to each individual agency.**
 - **No map picker** as it requires dependency to use them.  And exposes your IP to something the auto detection and manual location lookup already handles.
 - **Coordinates get rounded to about 1 km/.62mi (2 decimals)** on every weather and alert
   request, **even if you enter the exact coordinate**. 
@@ -56,14 +59,14 @@ Pared to the bare necessities. **No account, no API key, nor does it offer other
 
 ## Language
 
-If the widget earned a spot on your panel, and you would like to add to your language, translation is just about as easy as filling out a form. No coding needed.
+Translations welcome. If you'd like the widget in your language, it's roughly as easy as filling out a form, no coding.
 1. Download the template [`po/weather.pot`](https://github.com/bvlthvzvr/BareWeather/blob/main/po/weather.pot)
 2. Rename it to your language , ex `de.po` for German, `fr.po` for French. Then fill in the translations. Compress it to a zip folder.
 3. Send it back by [Email](mailto:bareweather.recreate814@silomails.com) or by [opening an issue](https://github.com/bvlthvzvr/BareWeather/issues/new) and attaching the file. Otherwise Open PR.
 
 ### Translators
 
-Grateful for everyone helping the widget speak your language!
+Grateful for everyone helping the widget speak your language! Thank you!
 
 🇩🇪 German - [AbeGasame](https://github.com/AbeGasame)
 
