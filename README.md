@@ -50,7 +50,7 @@ Pared to the bare necessities. **No account, no API key, nor does it offer other
 - **Auto-detect and alerts are both off by default**. The widget makes no IP-geolocation call and no alert request at all until you use them.
 - The only IP-geolocation provider is Mullvad, picked because it's a privacy
   company with a public no-logging stance.
-- Weather alerts come from KDE Public Alert Server. **It collects official severe weather warnings in standard CAP format from agencies around the world into one place, so you get worldwide alerts without ever contacting, or exposing yourself to each individual agency.**
+- Weather alerts come from KDE Public Alert Server. **It collects official severe weather warnings in CAP format from agencies around the world into one place, so you get worldwide alerts without ever contacting, or exposing yourself to each individual agency.**
 - **No map picker** as it requires dependency to use them.  And exposes your IP to something the auto detection and manual location lookup already handles.
 - **Coordinates get rounded to about 1 km/.62mi (2 decimals)** on every weather and alert
   request, **even if you enter the exact coordinate**. 
@@ -74,14 +74,14 @@ Grateful for everyone helping the widget speak your language! Thank you!
 
 ### KDE Store
 
-Right-click your panel or desktop -> **Add Widgets…** -> **Get New Widgets** ->
+Right click your panel or desktop -> **Add Widgets…** -> **Get New Widgets** ->
 **Download New Plasma Widgets**, then search for **Bare Weather** 
 
 ### From a release file
 
 1. Download the latest version from the [Releases](https://github.com/bvlthvzvr/BareWeather/releases) page.
 2. Install it — either:
-   - **GUI:** Add Widgets… → Get New Widgets → **Install Widget from Local File…**, or
+   - **GUI:** Add Widgets… -> Get New Widgets -> **Install Widget from Local File…**, or
    - **Terminal:**
      ```bash
      kpackagetool6 --type Plasma/Applet --install bare-weather.plasmoid
