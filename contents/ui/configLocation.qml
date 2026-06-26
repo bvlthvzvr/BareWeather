@@ -613,7 +613,8 @@ ScrollView {
                         ? Qt.rgba(Kirigami.Theme.highlightColor.r, Kirigami.Theme.highlightColor.g,
                                   Kirigami.Theme.highlightColor.b, 0.15)
                         : Qt.rgba(Kirigami.Theme.textColor.r, Kirigami.Theme.textColor.g,
-                                  Kirigami.Theme.textColor.b, 0.05)
+                                  Kirigami.Theme.textColor.b, rowHover.hovered ? 0.10 : 0.05)
+                    Behavior on color { ColorAnimation { duration: 100 } }
 
                     RowLayout {
                         id: rowLay
@@ -643,12 +644,6 @@ ScrollView {
                             }
                         }
                         Item { Layout.fillWidth: true }
-                        Button {
-                            text: i18n("Use")
-                            icon.name: "dialog-ok-apply"
-                            visible: !savedRow.isActive
-                            onClicked: page.useSaved(savedRow.index)
-                        }
                         Label {
                             text: i18n("Active")
                             visible: savedRow.isActive
@@ -674,6 +669,15 @@ ScrollView {
                             ToolTip.text: i18n("Remove")
                         }
                     }
+
+                    // double-click anywhere on the row switches to it (same as "Use").
+                    // The buttons above grab their own clicks, so this only fires on
+                    // the row body, and never on the already-active row.
+                    TapHandler {
+                        enabled: !savedRow.isActive
+                        onDoubleTapped: page.useSaved(savedRow.index)
+                    }
+                    HoverHandler { id: rowHover }
                 }
             }
         }
