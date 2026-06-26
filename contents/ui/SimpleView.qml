@@ -354,7 +354,10 @@ Item {
             else if (weatherRoot && av > 0 && parseFloat(weatherRoot.precipAmtStr(av)) > 0) lines++;  // amount line
             if (lines > maxLines) maxLines = lines;
         }
-        return maxLines > 0 ? maxLines * Math.round(graphReadoutFontSize * 1.4) + Kirigami.Units.smallSpacing : 0;
+        // ×1.2 (not the readout's full 1.4 line height): the marker's own markGap
+        // already adds slack above the readout, so the full height over-clears and
+        // floats the glyph too high near a wet boundary.
+        return maxLines > 0 ? maxLines * Math.round(graphReadoutFontSize * 1.2) : 0;
     }
     readonly property int nPts: curTemps.length
 
@@ -367,7 +370,18 @@ Item {
     readonly property real topReserve: Kirigami.Units.gridUnit * 4.1   // room for temp labels + the new-day marker above the peak
     readonly property real precipBandH: plotH * 0.13                   // bottom margin the temp curve keeps clear (smaller → taller, more dramatic temp curve)
     readonly property real precipMaxFrac: 0.70                         // precip fill rises to this fraction of plotH at 100% chance — high chances overlap the temp curve, low ones stay a sliver near the floor
-    readonly property real markerGap:   Kirigami.Units.gridUnit * 1.9  // gap between a new-day marker and the temp curve/label
+    readonly property real markerGap:   Kirigami.Units.gridUnit * 1.9  // base gap between a new-day marker and the temp curve/label
+    // The precip readout's amount/snow slot is FIXED-height but invisible when
+    // dry, so a fixed markerGap either floats too high over dry boundaries or
+    // crowds wet ones. Lift the marker a touch extra ONLY when ITS column is
+    // actually wet (shows an amount or snow line). Keeps the dry case tight and
+    // the wet case clear; both the dashed line and the label share this lift.
+    function markerLift(g) {
+        var s = samples[g];
+        var wet = s && (snowCm(s) >= 0.1
+                  || (weatherRoot && parseFloat(weatherRoot.precipAmtStr(precipMm(s))) > 0));
+        return markerGap + (wet ? Kirigami.Units.gridUnit * 0.7 : 0);
+    }
     readonly property real iconRowH: (weatherRoot ? weatherRoot.simpleHourlyIconSize : 24)
                                      + Kirigami.Units.smallSpacing * 2
     // grows with the configurable hour-axis font so a larger size never clips
@@ -379,7 +393,7 @@ Item {
     // threshold while scrolling. Asymmetric: a quick fade IN, a slower lingering fade
     // OUT. Each Behavior picks via its own on-flag — at fade start the flag already
     // holds the target state (on → in, off → out).
-    readonly property int  readoutFadeDur:    80    // fade IN
+    readonly property int  readoutFadeDur:    150   // fade IN
     readonly property int  readoutFadeOutDur: 500   // fade OUT
 
     // y-scale tracks the interpolated values, so the vertical range eases too. One
@@ -448,15 +462,10 @@ Item {
     // STABLE threshold, not a moving-peak test: a column keeps its label while rain
     // is present there and the value just MORPHS as you scroll (like the temp
     // numbers), instead of blinking as a peak slides across fixed columns. Snow
-    // labels use a fixed cm floor (0.1) the same way.
-    //
-    // pctLabelHide is the HYSTERESIS release point: a shown label only hides once the
-    // morphing value falls below it (not back at pctLabelMin). Without this gap, two
-    // adjacent hours whose chances bracket 30 (e.g. 39% and 16%) blank the label as
-    // the interpolated value passes ~27% mid-scroll; the band keeps it visible across
-    // the seam and only clears it where the column is genuinely dry.
-    readonly property int pctLabelMin:  30
-    readonly property int pctLabelHide: 20
+    // labels use a fixed cm floor (0.1) the same way. A column's % is shown when its
+    // hour's chance is at/above this; the seam between a wet and dry hour is handled
+    // by OR-ing both endpoint hours (see pctOn), not by a hysteresis release point.
+    readonly property int pctLabelMin:  25
 
     readonly property bool scrolling: posAnim.running || flickAnim.running || dragging
 
@@ -1313,20 +1322,88 @@ Item {
                             // Snow shows on EVERY snowy hour too — a repeated amount
                             // is fresh accumulation (½in + ½in = 1in), not a repeat.
                             readonly property string sText:  (weatherRoot && sVal >= 0.1) ? weatherRoot.snowfallStr(sVal, true) : ""
-                            // Sticky (hysteresis) visibility: on at pctLabelMin, off only
-                            // once below pctLabelHide; amtOn forces it on. The initializer
-                            // sets the resting state, then onPVal/onAmtOn drive it
-                            // imperatively as the value morphs — so a column straddling the
-                            // 30% line between two hours keeps its label across the seam
-                            // instead of blanking at the ~27% midpoint. See pctLabelHide.
-                            property bool pctOn: pVal >= simple.pctLabelMin || amtOn
-                            function _refreshPctOn() {
-                                pctOn = amtOn || pVal >= simple.pctLabelMin
-                                              || (pctOn && pVal >= simple.pctLabelHide);
+                            // % visibility is a DETERMINISTIC function of the hour(s) this column
+                            // represents — chance ≥ pctLabelMin OR a real amount — with NO sticky
+                            // history. (The old hysteresis bled a wet hour's "on" onto dry
+                            // neighbours: the fixed delegate slots get reused across hours while
+                            // scrolling, so the same hour showed or hid depending on scroll path.)
+                            // Mid-slide a column morphs between two hours, so OR both endpoints —
+                            // a wet hour stays labelled across its one-hour transition and the
+                            // label clears only once BOTH neighbours are dry. Settled (lo == hi)
+                            // it reduces to the one real hour, so a given hour always reads the same.
+                            function _onAt(arr, i) {
+                                var s = i < arr.length ? arr[i] : null;
+                                if (!s) return false;
+                                if (!isNaN(s.precip) && s.precip >= simple.pctLabelMin) return true;
+                                return weatherRoot && parseFloat(weatherRoot.precipAmtStr(simple.precipMm(s))) > 0;
                             }
-                            onPValChanged:  _refreshPctOn()
-                            onAmtOnChanged: _refreshPctOn()
-                            readonly property bool   snowOn: sText.length > 0
+                            readonly property bool pctOn: {
+                                // Visibility tracks the NEAREST real hour to this slot, not an OR
+                                // of both endpoints. OR kept a label lit over the gap between a wet
+                                // and a dry hour, so a dry slot briefly showed a number mid-scroll
+                                // then cleared on settle. Nearest flips once at the midpoint: the
+                                // label travels with a wet hour and clears as a dry one becomes
+                                // nearest. Settled (curFrac 0) it's the slot's own real hour.
+                                if (simple.dayMorphT < 1)   // day-pill / fling: nearest morph snapshot
+                                    return (simple.dayMorphT < 0.5 ? _pctOnAt(simple.morphFromP, simple.morphFromA, index)
+                                                                   : _pctOnAt(simple.morphToP,   simple.morphToA,   index)) === 1;
+                                return _onAt(simple.curFrac < 0.5 ? simple.loSamples : simple.hiSamples, index);
+                            }
+                            // Is the % label on for snapshot column i? — same rule as the
+                            // settled state: chance over threshold, OR a real amount this hour.
+                            function _pctOnAt(pArr, aArr, i) {
+                                var p = i < pArr.length ? pArr[i] : 0;
+                                if (p >= simple.pctLabelMin) return 1;
+                                var a = i < aArr.length ? aArr[i] : 0;
+                                return (weatherRoot && parseFloat(weatherRoot.precipAmtStr(a)) > 0) ? 1 : 0;
+                            }
+                            // Morph-tracked fade ONLY for a day-pill cross-fade (morphAnim): the
+                            // % fades across the whole morph from its source-day to target-day
+                            // visibility, so it finishes as the curve lands. A FLICK/wheel also
+                            // drives dayMorphT but PANS the window, so a screen column maps to
+                            // unrelated hours start vs end — there (and on scroll/settle) the
+                            // plain on-flag + Behavior fade is correct.
+                            readonly property real pctOpacity: {
+                                if (morphAnim.running) {
+                                    var fromOn = _pctOnAt(simple.morphFromP, simple.morphFromA, index);
+                                    var toOn   = _pctOnAt(simple.morphToP,   simple.morphToA,   index);
+                                    return fromOn + (toOn - fromOn) * simple.dayMorphT;
+                                }
+                                return pctOn ? 1 : 0;
+                            }
+                            // Snow/amount visibility uses the NEAREST real hour (same rule as the
+                            // chance %, see pctOn), so all three readout parts appear/clear together
+                            // as you scroll instead of each flipping on its own interpolated
+                            // threshold. The shown VALUE still morphs (sText/aText); only the
+                            // show/hide point is unified.
+                            function _nearSnow() {
+                                if (simple.dayMorphT < 1) {
+                                    var a = simple.dayMorphT < 0.5 ? simple.morphFromS : simple.morphToS;
+                                    return index < a.length ? a[index] : 0;
+                                }
+                                var arr = simple.curFrac < 0.5 ? simple.loSamples : simple.hiSamples;
+                                return index < arr.length ? simple.snowCm(arr[index]) : 0;
+                            }
+                            function _nearAmt() {
+                                if (simple.dayMorphT < 1) {
+                                    var a = simple.dayMorphT < 0.5 ? simple.morphFromA : simple.morphToA;
+                                    return index < a.length ? a[index] : 0;
+                                }
+                                var arr = simple.curFrac < 0.5 ? simple.loSamples : simple.hiSamples;
+                                return index < arr.length ? simple.precipMm(arr[index]) : 0;
+                            }
+                            readonly property bool   snowOn: _nearSnow() >= 0.1
+                            // Snow fades ACROSS a day-pill cross-fade (morphAnim) like the %,
+                            // rather than popping at its 0.1in threshold partway through the
+                            // morph. Scroll/settle keep the on-flag + Behavior fade.
+                            readonly property real snowOpacity: {
+                                if (morphAnim.running) {
+                                    var f = (index < simple.morphFromS.length ? simple.morphFromS[index] : 0) >= 0.1 ? 1 : 0;
+                                    var t = (index < simple.morphToS.length   ? simple.morphToS[index]   : 0) >= 0.1 ? 1 : 0;
+                                    return f + (t - f) * simple.dayMorphT;
+                                }
+                                return snowOn ? 1 : 0;
+                            }
                             // Liquid precip AMOUNT, shown on every wet hour like snow
                             // (each hour's rain is fresh, not a repeat). Gated on the
                             // FORMATTED value so a trace that rounds to "0.00 in" is
@@ -1334,7 +1411,23 @@ Item {
                             // above already carries that hour's accumulation.
                             readonly property real   aVal:   index < simple.curPrecipAmt.length ? simple.curPrecipAmt[index] : 0
                             readonly property string aText:  weatherRoot ? weatherRoot.precipAmtStr(aVal) : ""
-                            readonly property bool   amtOn:  !snowOn && aText.length > 0 && parseFloat(aText) > 0
+                            readonly property bool   amtOn:  !snowOn && weatherRoot && parseFloat(weatherRoot.precipAmtStr(_nearAmt())) > 0
+                            // Amount fades across a day-pill morph like the % and snow. On at a
+                            // snapshot column = a real amount AND not snowing there (snow's label
+                            // carries that hour instead). Scroll/settle keep the Behavior fade.
+                            function _amtOnAt(sArr, aArr, i) {
+                                if ((i < sArr.length ? sArr[i] : 0) >= 0.1) return 0;   // snowing → snow owns the slot
+                                var a = i < aArr.length ? aArr[i] : 0;
+                                return (weatherRoot && parseFloat(weatherRoot.precipAmtStr(a)) > 0) ? 1 : 0;
+                            }
+                            readonly property real amtOpacity: {
+                                if (morphAnim.running) {
+                                    var f = _amtOnAt(simple.morphFromS, simple.morphFromA, index);
+                                    var t = _amtOnAt(simple.morphToS,   simple.morphToA,   index);
+                                    return (f + (t - f) * simple.dayMorphT) * 0.9;
+                                }
+                                return amtOn ? 0.9 : 0;
+                            }
                             // each readout fades itself (below) so a value crossing its
                             // threshold while scrolling animates in/out instead of popping.
                             // BUT sText/aText blank EXACTLY when snowOn/amtOn flip false,
@@ -1374,8 +1467,10 @@ Item {
                                 Label {
                                     id: snowLbl
                                     anchors.centerIn: parent
-                                    opacity: roGroup.snowOn ? 1 : 0
-                                    Behavior on opacity { NumberAnimation { duration: roGroup.snowOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
+                                    opacity: roGroup.snowOpacity
+                                    // disabled during a day-pill morph: snowOpacity rides
+                                    // dayMorphT directly, so the Behavior would fight it.
+                                    Behavior on opacity { enabled: !morphAnim.running; NumberAnimation { duration: roGroup.snowOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
                                     text: roGroup.sShown
                                     color: simple.snowLabelColor
                                     font.bold: true
@@ -1385,17 +1480,20 @@ Item {
                                 Label {
                                     id: amtLbl
                                     anchors.centerIn: parent
-                                    opacity: roGroup.amtOn ? 0.9 : 0   // 0.9 = its lighter "detail" base
-                                    Behavior on opacity { NumberAnimation { duration: roGroup.amtOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
+                                    opacity: roGroup.amtOpacity   // 0.9 = its lighter "detail" base
+                                    Behavior on opacity { enabled: !morphAnim.running; NumberAnimation { duration: roGroup.amtOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
                                     text: roGroup.aShown
                                     color: simple.colorPrecip ? simple.precipColor : Kirigami.Theme.textColor
                                     font.pixelSize: Math.round(simple.graphReadoutFontSize * 0.85)
                                 }
                             }
                             Label {
-                                opacity: roGroup.pctOn ? 1 : 0
+                                opacity: roGroup.pctOpacity
                                 visible: opacity > 0
-                                Behavior on opacity { NumberAnimation { duration: roGroup.pctOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
+                                // disabled only during a day-pill morph: morphAnim drives
+                                // pctOpacity frame-by-frame, so the Behavior would fight it.
+                                // Enabled for flick/scroll/settle so those still fade normally.
+                                Behavior on opacity { enabled: !morphAnim.running; NumberAnimation { duration: roGroup.pctOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 text: Math.round(roGroup.pVal) + "%"
                                 color: simple.colorPrecip ? simple.precipColor : Kirigami.Theme.textColor
@@ -1432,7 +1530,7 @@ Item {
                                 if (!simple.isDayStart(g)) continue;
                                 var mx = simple.hourX(g);
                                 if (mx < -10 || mx > width + 10) continue;
-                                var top = Math.max(rowH, simple.curveYAtX(mx) - tLabelH - simple.markerGap);
+                                var top = Math.max(rowH, simple.curveYAtX(mx) - tLabelH - simple.markerLift(g));
                                 ctx.beginPath(); ctx.moveTo(mx, top); ctx.lineTo(mx, height); ctx.stroke();
                             }
                         }
@@ -1451,7 +1549,7 @@ Item {
                             y: {
                                 var cy = simple.curveYAtX(lineX);
                                 var tLabelH = (weatherRoot ? weatherRoot.simpleGraphTempFontSize : 13) * 1.4;
-                                return Math.max(0, cy - tLabelH - height - simple.markerGap);
+                                return Math.max(0, cy - tLabelH - height - simple.markerLift(g));
                             }
                             Kirigami.Icon {
                                 // new-day marker icon — a touch larger than the row text
