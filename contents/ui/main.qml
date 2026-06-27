@@ -182,25 +182,27 @@ PlasmoidItem {
         Plasmoid.configuration.simpleHeaderMetric4 || "none"
     ]
     // The two configurable readouts at the bottom of each Detailed hourly card.
-    // Each slot has a primary metric id and an optional fallback (shown when the
-    // primary has no value for an hour, e.g. snow → precip chance on a dry hour).
-    // See hourlyReadout().
+    // Each slot has a primary metric id and a chain of fallbacks, tried in order
+    // when the primary has no value for an hour (e.g. snow → precip chance → wind
+    // on a dry hour). See hourlyReadout().
     readonly property var hourlyMetrics: [
         { id: Plasmoid.configuration.hourlyMetric1 || "wind",
-          fallback: Plasmoid.configuration.hourlyMetric1Fallback || "none" },
+          fallbacks: [ Plasmoid.configuration.hourlyMetric1Fallback  || "none",
+                       Plasmoid.configuration.hourlyMetric1Fallback2 || "none" ] },
         { id: Plasmoid.configuration.hourlyMetric2 || "precip",
-          fallback: Plasmoid.configuration.hourlyMetric2Fallback || "none" }
+          fallbacks: [ Plasmoid.configuration.hourlyMetric2Fallback  || "none",
+                       Plasmoid.configuration.hourlyMetric2Fallback2 || "none" ] }
     ]
-    // Resolve a readout slot for hour `m` to { id, val }: the primary's value,
-    // or — when that's empty — the fallback's. `id` is whichever metric actually
-    // produced the text (so the card picks the right icon/glyph); `val` is ""
-    // when neither has anything to show.
+    // Resolve a readout slot for hour `m` to { id, val }: the primary's value, or
+    // the first fallback in the chain that has one. `id` is whichever metric
+    // actually produced the text (so the card picks the right icon/glyph); `val`
+    // is "" when nothing in the chain has anything to show.
     function hourlyReadout(slot, m) {
-        var v = hourlyMetricValue(slot.id, m);
-        if (v.length > 0) return { id: slot.id, val: v };
-        if (slot.fallback && slot.fallback !== "none") {
-            var fv = hourlyMetricValue(slot.fallback, m);
-            if (fv.length > 0) return { id: slot.fallback, val: fv };
+        var ids = [slot.id].concat(slot.fallbacks || []);
+        for (var i = 0; i < ids.length; ++i) {
+            if (!ids[i] || ids[i] === "none") continue;
+            var v = hourlyMetricValue(ids[i], m);
+            if (v.length > 0) return { id: ids[i], val: v };
         }
         return { id: slot.id, val: "" };
     }
@@ -217,16 +219,41 @@ PlasmoidItem {
                               ((!isNaN(m.gust) && Math.round(m.gust) > Math.round(m.wind))
                                   ? (Math.round(m.wind) + "G" + Math.round(m.gust))
                                   : ("" + Math.round(m.wind)));
-        // At/under precipDisplayFloor counts as nothing-to-show (so a fallback can
-        // take over, and the card stays clean like the rain wash does) — NaN is
-        // "no data". The card only shows a precip% once it's worth mentioning.
-        case "precip":    return (isNaN(m.precip) || m.precip <= precipDisplayFloor) ? "" : (Math.round(m.precip) + "%");
-        case "precipAmt": return precipAmtStr(m.precipAmt);
-        case "snow":      return snowfallStr(m.snow, true);
+        // At/under precipDisplayFloor counts as nothing-to-show on dry-coded hours
+        // so a fallback can take over. But on actual precip-coded hours (WMO 51+)
+        // always show the chance — suppressing it while the card shows a rain icon
+        // is more confusing than a low number.
+        case "precip": {
+            if (isNaN(m.precip)) return "";
+            var isPrecipCode = (m.code >= 51 && m.code <= 82) || m.code >= 95;
+            return (m.precip <= precipDisplayFloor && !isPrecipCode) ? "" : (Math.round(m.precip) + "%");
+        }
+        case "precipAmt": {
+            var pa = precipAmtStr(m.precipAmt);
+            if (pa.length > 0) return pa;
+            // Rain-coded hour but sub-display-threshold amount: icon shows rain so
+            // the readout must say something — else it blanks and a fallback fires
+            // over a visibly rainy hour. Mirror the same "light" floor as snow.
+            var pc = precipAwareCode(m.code, m.precip, m.precipAmt, m.snow, m.temp);
+            if (!isNaN(m.precipAmt)
+                    && ((pc >= 51 && pc <= 67) || (pc >= 80 && pc <= 82))) return i18n("light");
+            return "";
+        }
+        case "snow": {
+            var s = snowfallStr(m.snow, true);
+            if (s.length > 0) return s;
+            // Snow-coded hour but sub-0.1 cm: the card shows a snow ICON (gated on
+            // precipAwareCode), so the readout must say snow too — else it blanks
+            // and the fallback paints a raindrop over a snowing hour. "light" is
+            // the honest floor (same wording snowfallStr uses for tiny amounts).
+            var c = precipAwareCode(m.code, m.precip, m.precipAmt, m.snow, m.temp);
+            if ((c >= 71 && c <= 77) || c === 85 || c === 86) return i18n("light");
+            return "";
+        }
         case "humidity":  return isNaN(m.humidity) ? "" : (Math.round(m.humidity) + "%");
         case "uv":        return isNaN(m.uv) ? "" : ("UV " + Math.round(m.uv));
         case "feelsLike": return isNaN(m.feels) ? "" : tempStr(m.feels);
-        case "cloud":     return isNaN(m.cloud) ? "" : (Math.round(m.cloud) + "%");
+        case "cloud":     return (isNaN(m.cloud) || m.cloud < 10) ? "" : (Math.round(m.cloud) + "%");
         }
         return "";   // "none" / unknown
     }
@@ -261,10 +288,17 @@ PlasmoidItem {
         }
         return 1.5;
     }
-    // per-hour precipitation amount → "1.2 mm" / "0.05 in" (imperial follows °F)
+    // per-hour precipitation amount → "1.2 mm" / "0.05 in" (imperial follows °F).
+    // Blanks an amount that ROUNDS to zero at display precision (not just mm<=0), so
+    // a trace hour shows nothing rather than a meaningless "0.00 in" / "0.0 mm" — and
+    // a readout slot using this as a fallback can hand off / go empty on that hour.
     function precipAmtStr(mm) {
         if (isNaN(mm) || mm <= 0) return "";
-        return units === "fahrenheit" ? ((mm / 25.4).toFixed(2) + " in") : (mm.toFixed(1) + " mm");
+        if (units === "fahrenheit") {
+            var inch = mm / 25.4;
+            return inch < 0.005 ? "" : (inch.toFixed(2) + " in");  // rounds to 0.00 in → nothing
+        }
+        return mm < 0.05 ? "" : (mm.toFixed(1) + " mm");           // rounds to 0.0 mm → nothing
     }
     // header precipitation amount (mm) → display string in the active unit; imperial
     // (°F) → inches (2 dp), else mm (1 dp). `perHour` adds "/h" for a rate. Unlike
@@ -817,8 +851,41 @@ PlasmoidItem {
             && ((code >= 71 && code <= 77) || code === 85 || code === 86)
             && !isNaN(cloudCover) && cloudCover >= overcastCloudCover;
     }
-    function precipAwareCode(code, precip, precipAmt, snow) {
+    function precipAwareCode(code, precip, precipAmt, snow, temp) {
         var snowing = !isNaN(snow) && snow >= snowIconThreshold;
+        // Sub-freezing air can't produce liquid rain/drizzle, yet Open-Meteo
+        // sometimes returns a plain rain code (with ZERO snowfall) at e.g. -6 °C.
+        // Force snow when the air is at/below freezing on a plain rain/drizzle/
+        // shower code. SKIP the freezing-rain codes (56/57/66/67) — those are
+        // legit supercooled liquid and stay sleet.
+        var freezing = (units === "fahrenheit") ? 32 : 0;
+        // Does this hour show precip at all? Either a precip weather_code, OR a
+        // clear/cloudy code that a high chance / real amount upgrades to precip
+        // (same test the chance-upgrade rule below uses). Both the sub-freezing
+        // and mix-band rules need to fire on EITHER, else a cloudy-but-likely hour
+        // slips past them and gets rain-upgraded.
+        var precipCode = (code >= 51 && code <= 67) || (code >= 71 && code <= 86);
+        var chanceUp   = code <= 3 && ((!isNaN(precip) && precip >= rainIconThreshold)
+                                    || (!isNaN(precipAmt) && precipAmt >= rainAmountThreshold));
+        var hasPrecip  = precipCode || chanceUp;
+        // Sub-freezing air can't produce liquid rain/drizzle, yet Open-Meteo can
+        // return a plain rain code (or a likely-rain cloudy code) at e.g. -6 °C.
+        // Force snow. SKIP explicit freezing-rain codes (56/57/66/67) — legit
+        // supercooled liquid, stays sleet.
+        var freezingRain = (code === 56 || code === 57 || code === 66 || code === 67);
+        if (!isNaN(temp) && temp <= freezing && hasPrecip && !freezingRain)
+            return 71;                                // → snow icon (71–77 all map to snow)
+        // Just above freezing (~33–39 °F / 0–4 °C), a RAIN code is the dubious one:
+        // liquid rain at near-freezing amid cold air is really wintry MIX (verified
+        // across GFS/ECMWF/ICON/wttr/met.no — they split, two independents said
+        // sleet). So a rain/drizzle/shower hour (or a cloudy hour chance-upgraded to
+        // rain) in that band → sleet (66 → wi-sleet). A SNOW code here is left ALONE
+        // — it's a confident snow forecast, so consistent snow runs at 35–38 °F stay
+        // snow instead of being blanket-converted to sleet. See DEVELOPMENT.
+        var mixCeil = (units === "fahrenheit") ? 39 : 4;
+        var rainType = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || chanceUp;
+        if (!isNaN(temp) && temp > freezing && temp <= mixCeil && rainType)
+            return 66;                                // → sleet icon (56/57/66/67 all map to sleet)
         // Near freezing, Open-Meteo can return a RAIN weather_code while still
         // forecasting snowfall (cm). The amount is the honest signal, so trust it
         // over a rain/drizzle/showers code and show snow — keeping the icon in

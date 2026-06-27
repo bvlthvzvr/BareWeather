@@ -60,10 +60,13 @@
     <entry name="simpleHeaderMetric4" type="String"><default>none</default></entry>
     <entry name="hourlyMetric1" type="String"><default>wind</default></entry>
     <entry name="hourlyMetric2" type="String"><default>precip</default></entry>
-    <!-- per-slot fallback shown when the primary readout has no value for an
-         hour (e.g. snow on a dry hour falls back to precip chance) -->
+    <!-- per-slot fallbacks, tried in order when the primary readout has no value
+         for an hour (e.g. snow on a dry hour falls back to precip chance, then
+         to wind) -->
     <entry name="hourlyMetric1Fallback" type="String"><default>none</default></entry>
+    <entry name="hourlyMetric1Fallback2" type="String"><default>none</default></entry>
     <entry name="hourlyMetric2Fallback" type="String"><default>none</default></entry>
+    <entry name="hourlyMetric2Fallback2" type="String"><default>none</default></entry>
     <!-- hour a non-today day opens at in the Detailed hourly timeline:
          6 = 6 AM (skip the overnight cards), 0 = midnight. Today always opens
          at the current hour regardless. -->

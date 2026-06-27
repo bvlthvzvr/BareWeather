@@ -54,7 +54,9 @@ Item {
     property string cfg_hourlyMetric1
     property string cfg_hourlyMetric2
     property string cfg_hourlyMetric1Fallback
+    property string cfg_hourlyMetric1Fallback2
     property string cfg_hourlyMetric2Fallback
+    property string cfg_hourlyMetric2Fallback2
     property int    cfg_detailDayStartHour
     // Panel (compact view)
     property alias cfg_panelIconPercent:   panelIconSpin.value
@@ -73,21 +75,19 @@ Item {
         { text: i18n("Snowfall today"),          id: "snowSum"    },
         { text: i18n("Cloud cover"),             id: "cloud"      }
     ]
-    function metricIndexOf(id) {
-        for (var i = 0; i < metricOptions.length; ++i)
-            if (metricOptions[i].id === id) return i;
+    function findMetricIndex(arr, id) {
+        for (var i = 0; i < arr.length; ++i)
+            if (arr[i].id === id) return i;
         return 0;
     }
+    function metricIndexOf(id)        { return findMetricIndex(metricOptions,        id) }
+    function detailMetricIndexOf(id)  { return findMetricIndex(detailMetricOptions,  id) }
+    function hourlyMetricIndexOf(id)  { return findMetricIndex(hourlyMetricOptions,  id) }
     // Detailed layout additionally offers sunrise/sunset; the Simple header keeps the
     // base set, so these stay Detailed-only (its combos still use metricOptions).
     readonly property var detailMetricOptions: metricOptions.concat([
         { text: i18n("Sunrise / sunset"), id: "sun" }
     ])
-    function detailMetricIndexOf(id) {
-        for (var i = 0; i < detailMetricOptions.length; ++i)
-            if (detailMetricOptions[i].id === id) return i;
-        return 0;
-    }
     // Per-hour options for the Detailed hourly-card readouts (chance/amount are
     // per-hour, unlike the header's daily-total precip/snow sums).
     readonly property var hourlyMetricOptions: [
@@ -102,11 +102,6 @@ Item {
         { text: i18n("UV Index"),      id: "uv"        },
         { text: i18n("Cloud cover"),   id: "cloud"     }
     ]
-    function hourlyMetricIndexOf(id) {
-        for (var i = 0; i < hourlyMetricOptions.length; ++i)
-            if (hourlyMetricOptions[i].id === id) return i;
-        return 0;
-    }
 
     ColumnLayout {
         anchors.fill: parent
@@ -283,69 +278,10 @@ Item {
                             }
                         }
 
-                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing * 2 }   // gap above this section (FormLayout ignores Layout.topMargin on a section row)
-                        RowLayout {
-                            // Section header as a row so the help icon sits INLINE with the
-                            // title. Layout.fillWidth is the crucial bit: without it the row
-                            // imposes its own width on the FormLayout and shoves the two
-                            // columns apart; with it the row just fills the section span.
-                            Kirigami.FormData.isSection: true
-                            Layout.fillWidth: true
-                            // Shrinkable leading indent: nudges the title right to line up with
-                            // the label column below. fillWidth + min-width 0 means it grows into
-                            // spare space but never WIDENS the section (a fixed leftMargin did,
-                            // which shoved the right column over). It's the only fillWidth child,
-                            // so it takes the slack up to its max.
-                            Item { Layout.fillWidth: true; Layout.maximumWidth: Kirigami.Units.gridUnit * 5 }
-                            Kirigami.Heading {
-                                level: 5
-                                text: i18n("Hourly cards (2 elements)")
-                            }
-                            Kirigami.Icon {
-                                source: "documentinfo"
-                                implicitWidth: Kirigami.Units.iconSizes.small
-                                implicitHeight: implicitWidth
-                                opacity: hourlyInfoHover.hovered ? 1.0 : 0.65
-                                HoverHandler { id: hourlyInfoHover; cursorShape: Qt.PointingHandCursor }
-                                ToolTip.visible: hourlyInfoHover.hovered
-                                ToolTip.text: i18n("Shows the main metric, or the fallback on hours the main one has nothing to show.")
-                            }   // soak up remaining width so the row never dictates it
-                        }
-                        ConfigComboBox {
-                            id: hourMetric1
-                            Kirigami.FormData.label: i18n("Line 1:")
-                            textRole: "text"
-                            model: page.hourlyMetricOptions
-                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1)
-                            onActivated: page.cfg_hourlyMetric1 = page.hourlyMetricOptions[currentIndex].id
-                        }
-                        ConfigComboBox {
-                            id: hourMetric1Fallback
-                            Kirigami.FormData.label: i18n("Fallback:")
-                            textRole: "text"
-                            model: page.hourlyMetricOptions
-                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1Fallback)
-                            onActivated: page.cfg_hourlyMetric1Fallback = page.hourlyMetricOptions[currentIndex].id
-                        }
-                        ConfigComboBox {
-                            id: hourMetric2
-                            Kirigami.FormData.label: i18n("Line 2:")
-                            textRole: "text"
-                            model: page.hourlyMetricOptions
-                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2)
-                            onActivated: page.cfg_hourlyMetric2 = page.hourlyMetricOptions[currentIndex].id
-                        }
-                        ConfigComboBox {
-                            id: hourMetric2Fallback
-                            Kirigami.FormData.label: i18n("Fallback:")
-                            textRole: "text"
-                            model: page.hourlyMetricOptions
-                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2Fallback)
-                            onActivated: page.cfg_hourlyMetric2Fallback = page.hourlyMetricOptions[currentIndex].id
-                        }
                     }
                     Kirigami.FormLayout {
                         Layout.alignment: Qt.AlignTop
+                        Layout.leftMargin: Kirigami.Units.gridUnit * 4
                         Layout.topMargin: 0   // header has no intrinsic top padding now, so no negative pull needed (was clipping the title)
                         RowLayout {
                             // inline section header (see the matching note in the Hourly cards section)
@@ -414,6 +350,74 @@ Item {
                                 page.cfg_headerMetric3 = "none"; detMetric3.currentIndex = 0;
                                 page.cfg_headerMetric4 = "none"; detMetric4.currentIndex = 0;
                             }
+                        }
+
+                        Item { Layout.preferredHeight: Kirigami.Units.largeSpacing * 2 }
+                        RowLayout {
+                            Kirigami.FormData.isSection: true
+                            Layout.fillWidth: true
+                            Kirigami.Heading {
+                                level: 5
+                                text: i18n("Hourly cards (2 elements)")
+                            }
+                            Kirigami.Icon {
+                                source: "documentinfo"
+                                implicitWidth: Kirigami.Units.iconSizes.small
+                                implicitHeight: implicitWidth
+                                opacity: hourlyInfoHover.hovered ? 1.0 : 0.65
+                                HoverHandler { id: hourlyInfoHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: hourlyInfoHover.hovered
+                                ToolTip.text: i18n("Shows the main metric, or the fallback on hours the main one has nothing to show.")
+                            }
+                            Item { Layout.fillWidth: true }
+                        }
+                        ConfigComboBox {
+                            id: hourMetric1
+                            Kirigami.FormData.label: i18n("Line 1:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1)
+                            onActivated: page.cfg_hourlyMetric1 = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ConfigComboBox {
+                            id: hourMetric1Fallback
+                            Kirigami.FormData.label: i18n("Fallback:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1Fallback)
+                            onActivated: page.cfg_hourlyMetric1Fallback = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ConfigComboBox {
+                            id: hourMetric1Fallback2
+                            Kirigami.FormData.label: i18n("Fallback:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1Fallback2)
+                            onActivated: page.cfg_hourlyMetric1Fallback2 = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ConfigComboBox {
+                            id: hourMetric2
+                            Kirigami.FormData.label: i18n("Line 2:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2)
+                            onActivated: page.cfg_hourlyMetric2 = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ConfigComboBox {
+                            id: hourMetric2Fallback
+                            Kirigami.FormData.label: i18n("Fallback:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2Fallback)
+                            onActivated: page.cfg_hourlyMetric2Fallback = page.hourlyMetricOptions[currentIndex].id
+                        }
+                        ConfigComboBox {
+                            id: hourMetric2Fallback2
+                            Kirigami.FormData.label: i18n("Fallback:")
+                            textRole: "text"
+                            model: page.hourlyMetricOptions
+                            Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2Fallback2)
+                            onActivated: page.cfg_hourlyMetric2Fallback2 = page.hourlyMetricOptions[currentIndex].id
                         }
                     }
                 }

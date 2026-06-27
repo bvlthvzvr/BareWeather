@@ -840,32 +840,10 @@ Item {
     }
 
     // toolbar buttons floated at the very top-right corner (mirrors FullView)
-    Row {
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: -Math.round(simple.pad * 0.35)
-        anchors.rightMargin: Math.round(simple.pad * 0.35)
-        spacing: 0
-        z: 10
-        DotButton {
-            // switch to the detailed (regular) layout
-            onClicked: if (weatherRoot) weatherRoot.toggleLayout()
-            ToolTip.visible: hovered
-            ToolTip.text: i18n("Switch to detailed layout")
-        }
-        DotButton {
-            checkable: true
-            Component.onCompleted: checked = (weatherRoot ? weatherRoot.keepOpen : false)
-            onToggled: if (weatherRoot) weatherRoot.setKeepOpen(checked)
-            ToolTip.visible: hovered
-            ToolTip.text: checked ? i18n("Unpin window") : i18n("Keep window open")
-        }
-        DotButton {
-            enabled: weatherRoot && !weatherRoot.loading
-            onClicked: if (weatherRoot) weatherRoot.fetchWeather()
-            ToolTip.visible: hovered
-            ToolTip.text: i18n("Refresh")
-        }
+    WeatherToolbar {
+        pad: simple.pad
+        switchTooltip: i18n("Switch to detailed layout")
+        root: weatherRoot
     }
 
     ColumnLayout {
@@ -1653,7 +1631,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             // probability-aware code: a likely-rain hour shows rain even if the code reads cloudy
                             readonly property int iconCode: (weatherRoot && modelData)
-                                ? weatherRoot.precipAwareCode(modelData.code, modelData.precip, modelData.precipAmt, modelData.snow) : 0
+                                ? weatherRoot.precipAwareCode(modelData.code, modelData.precip, modelData.precipAmt, modelData.snow, modelData.temp) : 0
                             // Always resolve the WebP so the static (non-animated) graph icon is
                             // the SAME artwork as the animated card icon — just frozen (playing
                             // gated below on simpleAnimatedIcons). Falls back to the static SVG only

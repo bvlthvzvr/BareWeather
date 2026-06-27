@@ -15,9 +15,28 @@ Reproducible steps to (re)generate the bundled icon pack from Meteocons.
 ## Prerequisites
 ```fish
 python3 -m venv /tmp/v3venv
-/tmp/v3venv/bin/pip install lottie cairosvg pillow   # GIF export needs cairosvg
+/tmp/v3venv/bin/pip install lottie==0.7.1 cairosvg setuptools pillow
 # system: imagemagick (magick), librsvg (rsvg-convert), and PyQt6 for verification
 ```
+⚠️ **Version pins matter — the recipe is fragile across lottie releases + new Python:**
+- **`lottie==0.7.1`** — the two pipeline scripts need APIs from *different* eras:
+  `render_frames.py` imports `lottie.exporters.cairo.export_png` (**removed in 0.7.2**)
+  and `pad_lottie.py` calls `anim.to_precomp()` (**absent in ≤0.6.x**). 0.7.1 is the
+  only version with both. If a frame render emits 0 frames or `pad_lottie` throws
+  `AttributeError: to_precomp`, you're on the wrong version.
+- **`cairosvg`** is what actually rasterizes — python-lottie's PNG path is gated on
+  `lottie.exporters.cairo.has_cairo`, which is **only true when `cairosvg` imports**.
+  `pycairo` alone does **not** satisfy it (`export_png` won't even import).
+- **`setuptools`** — Python 3.12+ removed `distutils`, which older `lottie` imports
+  (`ModuleNotFoundError: No module named 'distutils'`); setuptools restores it.
+
+### Adjusting raindrop / streak length (sleet, rain)
+Each precip streak is a 2-vertex vertical line in the Lottie (`"v": [[x,88],[x,91]]`
+= length 3) and in the static SVG (`d="M52 88v3"`). To lengthen, extend the bottom
+point downward — keep the top at y=88 so it still hangs from the cloud. Sleet drops
+were taken to **11** (`v11`) so sleet reads distinctly from snow (flakes, no streak).
+Edit BOTH the baked webp (re-run the Lottie through `bake_v3.sh`) AND the static SVGs
+(`wi-*-sleet.svg`, both packs, all sizes) or the two will disagree when animation is off.
 
 ## Steps
 1. **Static color** — fetch flat `svg-static`, strip masks, drop into

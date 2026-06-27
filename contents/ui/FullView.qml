@@ -74,7 +74,11 @@ Item {
     // while a near-freezing snow hour keeps a blue corner too (the wintry-mix
     // diagonal). Rain-coded hours stay all blue.
     function snowFraction(code, precip, precipAmt, snowCm, temp) {
-        var ic = weatherRoot ? weatherRoot.precipAwareCode(code, precip, precipAmt, snowCm) : code;
+        var ic = weatherRoot ? weatherRoot.precipAwareCode(code, precip, precipAmt, snowCm, temp) : code;
+        // Sleet (56/57/66/67) is a rain/snow MIX — give it a half-and-half wash so
+        // the corner shows both colours, matching the sleet glyph (the marginal-band
+        // hours land here; pure blue read as plain rain under a "light snow" label).
+        if (ic === 56 || ic === 57 || ic === 66 || ic === 67) return 0.5;
         if (!((ic >= 71 && ic <= 77) || ic === 85 || ic === 86)) return 0;   // icon says rain → all blue
         if (isNaN(temp)) return 1;
         var f = weatherRoot && weatherRoot.units === "fahrenheit";
@@ -120,33 +124,10 @@ Item {
 
     // toolbar buttons floated at the very top-right corner (out of the header
     // flow, so they don't push the condition/location down)
-    Row {
-        anchors.top: parent.top
-        anchors.right: parent.right
-        anchors.topMargin: -Math.round(full.pad * 0.35)
-        anchors.rightMargin: Math.round(full.pad * 0.35)
-        spacing: 0
-        z: 10
-        DotButton {
-            // switch to the simple (graph) layout
-            onClicked: if (weatherRoot) weatherRoot.toggleLayout()
-            ToolTip.visible: hovered
-            ToolTip.text: i18n("Switch to graph layout")
-        }
-        DotButton {
-            id: pinButton
-            checkable: true
-            Component.onCompleted: checked = (weatherRoot ? weatherRoot.keepOpen : false)
-            onToggled: if (weatherRoot) weatherRoot.setKeepOpen(checked)
-            ToolTip.visible: hovered
-            ToolTip.text: checked ? i18n("Unpin window") : i18n("Keep window open")
-        }
-        DotButton {
-            enabled: weatherRoot && !weatherRoot.loading
-            onClicked: if (weatherRoot) weatherRoot.fetchWeather()
-            ToolTip.visible: hovered
-            ToolTip.text: i18n("Refresh")
-        }
+    WeatherToolbar {
+        pad: full.pad
+        switchTooltip: i18n("Switch to graph layout")
+        root: weatherRoot
     }
 
     implicitWidth:  content.implicitWidth  + pad * 2
@@ -728,7 +709,7 @@ Item {
                                         Layout.preferredHeight: weatherRoot ? weatherRoot.hourlyIconSize : 32
 
                                         // probability-aware code: a likely-rain hour shows rain even if the code reads cloudy
-                                        readonly property int iconCode: weatherRoot ? weatherRoot.precipAwareCode(modelData.code, modelData.precip, modelData.precipAmt, modelData.snow) : modelData.code
+                                        readonly property int iconCode: weatherRoot ? weatherRoot.precipAwareCode(modelData.code, modelData.precip, modelData.precipAmt, modelData.snow, modelData.temp) : modelData.code
                                         // Always resolve the WebP so the static (anim-off) icon is the
                                         // SAME artwork as the animated one — just frozen (playing gated
                                         // below on animatedHourlyIcons). Falls back to the static SVG only
