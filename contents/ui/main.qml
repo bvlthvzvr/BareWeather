@@ -228,17 +228,11 @@ PlasmoidItem {
             var isPrecipCode = (m.code >= 51 && m.code <= 82) || m.code >= 95;
             return (m.precip <= precipDisplayFloor && !isPrecipCode) ? "" : (Math.round(m.precip) + "%");
         }
-        case "precipAmt": {
-            var pa = precipAmtStr(m.precipAmt);
-            if (pa.length > 0) return pa;
-            // Rain-coded hour but sub-display-threshold amount: icon shows rain so
-            // the readout must say something — else it blanks and a fallback fires
-            // over a visibly rainy hour. Mirror the same "light" floor as snow.
-            var pc = precipAwareCode(m.code, m.precip, m.precipAmt, m.snow, m.temp);
-            if (!isNaN(m.precipAmt)
-                    && ((pc >= 51 && pc <= 67) || (pc >= 80 && pc <= 82))) return i18n("light");
-            return "";
-        }
+        case "precipAmt":
+            // precipAmtStr renders every real amount as a number (traces at extra
+            // precision). A true-zero hour has no number to show, so it blanks and the
+            // slot's fallback (if any) takes over.
+            return precipAmtStr(m.precipAmt);
         case "snow": {
             var s = snowfallStr(m.snow, true);
             if (s.length > 0) return s;
@@ -289,16 +283,22 @@ PlasmoidItem {
         return 1.5;
     }
     // per-hour precipitation amount → "1.2 mm" / "0.05 in" (imperial follows °F).
-    // Blanks an amount that ROUNDS to zero at display precision (not just mm<=0), so
-    // a trace hour shows nothing rather than a meaningless "0.00 in" / "0.0 mm" — and
-    // a readout slot using this as a fallback can hand off / go empty on that hour.
+    // A real-but-sub-display amount (would round to "0.00 in" / "0.0 mm" at the normal
+    // precision) is shown at EXTRA precision instead, so a trace reads as a real small
+    // number (e.g. "0.004 in") rather than a meaningless zero. Only a TRUE zero
+    // (mm <= 0) — or a value that rounds away even at the extra precision — blanks.
+    // Every non-empty return is a positive number, so callers gate visibility on `!== ""`.
     function precipAmtStr(mm) {
         if (isNaN(mm) || mm <= 0) return "";
         if (units === "fahrenheit") {
             var inch = mm / 25.4;
-            return inch < 0.005 ? "" : (inch.toFixed(2) + " in");  // rounds to 0.00 in → nothing
+            if (inch >= 0.005) return inch.toFixed(2) + " in";   // normal: 2 dp
+            var i3 = inch.toFixed(3);                            // trace: 3 dp so it isn't "0.00 in"
+            return i3 === "0.000" ? "" : i3 + " in";             // rounds away even at 3 dp → blank
         }
-        return mm < 0.05 ? "" : (mm.toFixed(1) + " mm");           // rounds to 0.0 mm → nothing
+        if (mm >= 0.05) return mm.toFixed(1) + " mm";            // normal: 1 dp
+        var m2 = mm.toFixed(2);                                  // trace: 2 dp
+        return m2 === "0.00" ? "" : m2 + " mm";                  // rounds away even at 2 dp → blank
     }
     // header precipitation amount (mm) → display string in the active unit; imperial
     // (°F) → inches (2 dp), else mm (1 dp). `perHour` adds "/h" for a rate. Unlike

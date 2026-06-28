@@ -351,7 +351,7 @@ Item {
             var lines = 0;
             if (pv >= pctLabelMin) lines++;                                          // % line
             if (sv >= 0.1) lines++;                                                  // snow line
-            else if (weatherRoot && av > 0 && parseFloat(weatherRoot.precipAmtStr(av)) > 0) lines++;  // amount line
+            else if (weatherRoot && av > 0 && weatherRoot.precipAmtStr(av) !== "") lines++;  // amount line (incl. trace numbers)
             if (lines > maxLines) maxLines = lines;
         }
         // ×1.2 (not the readout's full 1.4 line height): the marker's own markGap
@@ -379,7 +379,7 @@ Item {
     function markerLift(g) {
         var s = samples[g];
         var wet = s && (snowCm(s) >= 0.1
-                  || (weatherRoot && parseFloat(weatherRoot.precipAmtStr(precipMm(s))) > 0));
+                  || (weatherRoot && weatherRoot.precipAmtStr(precipMm(s)) !== ""));
         return markerGap + (wet ? Kirigami.Units.gridUnit * 0.7 : 0);
     }
     readonly property real iconRowH: (weatherRoot ? weatherRoot.simpleHourlyIconSize : 24)
@@ -1313,7 +1313,7 @@ Item {
                                 var s = i < arr.length ? arr[i] : null;
                                 if (!s) return false;
                                 if (!isNaN(s.precip) && s.precip >= simple.pctLabelMin) return true;
-                                return weatherRoot && parseFloat(weatherRoot.precipAmtStr(simple.precipMm(s))) > 0;
+                                return weatherRoot && weatherRoot.precipAmtStr(simple.precipMm(s)) !== "";
                             }
                             readonly property bool pctOn: {
                                 // Visibility tracks the NEAREST real hour to this slot, not an OR
@@ -1333,7 +1333,7 @@ Item {
                                 var p = i < pArr.length ? pArr[i] : 0;
                                 if (p >= simple.pctLabelMin) return 1;
                                 var a = i < aArr.length ? aArr[i] : 0;
-                                return (weatherRoot && parseFloat(weatherRoot.precipAmtStr(a)) > 0) ? 1 : 0;
+                                return (weatherRoot && weatherRoot.precipAmtStr(a) !== "") ? 1 : 0;
                             }
                             // Morph-tracked fade ONLY for a day-pill cross-fade (morphAnim): the
                             // % fades across the whole morph from its source-day to target-day
@@ -1389,14 +1389,14 @@ Item {
                             // above already carries that hour's accumulation.
                             readonly property real   aVal:   index < simple.curPrecipAmt.length ? simple.curPrecipAmt[index] : 0
                             readonly property string aText:  weatherRoot ? weatherRoot.precipAmtStr(aVal) : ""
-                            readonly property bool   amtOn:  !snowOn && weatherRoot && parseFloat(weatherRoot.precipAmtStr(_nearAmt())) > 0
+                            readonly property bool   amtOn:  !snowOn && weatherRoot && weatherRoot.precipAmtStr(_nearAmt()) !== ""
                             // Amount fades across a day-pill morph like the % and snow. On at a
                             // snapshot column = a real amount AND not snowing there (snow's label
                             // carries that hour instead). Scroll/settle keep the Behavior fade.
                             function _amtOnAt(sArr, aArr, i) {
                                 if ((i < sArr.length ? sArr[i] : 0) >= 0.1) return 0;   // snowing → snow owns the slot
                                 var a = i < aArr.length ? aArr[i] : 0;
-                                return (weatherRoot && parseFloat(weatherRoot.precipAmtStr(a)) > 0) ? 1 : 0;
+                                return (weatherRoot && weatherRoot.precipAmtStr(a) !== "") ? 1 : 0;
                             }
                             readonly property real amtOpacity: {
                                 if (morphAnim.running) {
