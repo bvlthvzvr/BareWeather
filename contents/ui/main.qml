@@ -9,7 +9,9 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
+import QtQuick.Effects
 import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
 import org.kde.kirigami as Kirigami
 
 PlasmoidItem {
@@ -20,6 +22,16 @@ PlasmoidItem {
     function setKeepOpen(v) { Plasmoid.configuration.keepOpen = v; }
     function toggleLayout() { Plasmoid.configuration.simpleLayout = !simpleLayout; }
     hideOnWindowDeactivate: !keepOpen
+
+    // Transparent on the desktop by default — the widget paints its own content
+    // and looks better floating frameless over the wallpaper. ConfigurableBackground
+    // keeps the "Show background" toggle in settings, so the standard applet frame
+    // is one click away for anyone who wants it. No-op on the panel.
+    Plasmoid.backgroundHints: PlasmaCore.Types.NoBackground | PlasmaCore.Types.ConfigurableBackground
+
+    // On the desktop (not the panel) the full rep is embedded directly — its size
+    // is the applet box, not a popup window. The popup machinery below no-ops here.
+    readonly property bool planar: Plasmoid.formFactor === PlasmaCore.Types.Planar
 
     // ── Live weather state ────────────────────────────────────────────────
     property real temperature: NaN
@@ -1200,8 +1212,33 @@ PlasmoidItem {
         // natural size, then self-pins on first capture.
         implicitWidth:  savedW > 0 ? savedW : (view ? view.implicitWidth : Kirigami.Units.gridUnit * 32)
         implicitHeight: view ? view.implicitHeight : Kirigami.Units.gridUnit * 20
-        Layout.minimumWidth:  view ? view.Layout.minimumWidth  : 0
-        Layout.minimumHeight: view ? view.Layout.minimumHeight : 0
+        // On the panel the popup keeps its own sizing. On the DESKTOP a widget has ONE
+        // stored geometry that Plasma only ever grows (never shrinks) — per-layout or
+        // auto-shrink sizing is impossible. We pin the minimum to the content size so
+        // the box is always big enough for the active layout (no graph/pills spilling
+        // past the edge, toolbar stays in the corner); the box settles at the largest
+        // layout's size and both layouts share it. Size is driven by content
+        // (Appearance settings). Panel popup keeps its own implicit sizing.
+        readonly property real _deskW: view ? view.implicitWidth  : Kirigami.Units.gridUnit * 32
+        readonly property real _deskH: view ? view.implicitHeight : Kirigami.Units.gridUnit * 20
+        Layout.minimumWidth:  root.planar ? _deskW : (view ? view.Layout.minimumWidth  : 0)
+        Layout.minimumHeight: root.planar ? _deskH : (view ? view.Layout.minimumHeight : 0)
+        Layout.preferredWidth:  root.planar ? _deskW : implicitWidth
+        Layout.preferredHeight: root.planar ? _deskH : implicitHeight
+
+        // On the desktop the widget floats frameless over the wallpaper, so its text
+        // can wash out on bright/busy backgrounds. Drop a soft shadow behind the whole
+        // view (text + icons) for contrast. Desktop only — the panel popup has its own
+        // background. ponytail: one layer effect instead of a shadow on every label;
+        // the layer re-rasterises with the hero animation, fine for one desktop widget.
+        layer.enabled: root.planar
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: Qt.rgba(0, 0, 0, 0.9)
+            shadowBlur: 0.55
+            shadowVerticalOffset: 1
+            shadowHorizontalOffset: 0
+        }
 
         // ── Per-layout remembered popup size ──────────────────────────────
         // Plasma's AppletPopup owns the window size: it keeps ONE shared
@@ -1219,7 +1256,16 @@ PlasmoidItem {
                                                         : Plasmoid.configuration.detailPopupHeight
         property bool _applying: false
 
-        function _win() { return fullRep.Window.window; }
+        // On the desktop (Planar form factor) the full rep is embedded directly
+        // in the containment view — its Window IS the desktop, not a popup. The
+        // size-driving below would then resize the desktop window itself, which
+        // a user reads as "it resizes the wallpaper" / "zooms in on layout switch"
+        // (KDE Neon / Plasma 6.7 bug report). Return null off-panel so every
+        // driver here no-ops; the embedded widget just sizes from its Layout hints.
+        function _win() {
+            if (Plasmoid.formFactor === PlasmaCore.Types.Planar) return null;
+            return fullRep.Window.window;
+        }
 
         function applySize() {
             var win = _win();
@@ -1236,6 +1282,7 @@ PlasmoidItem {
 
         function captureSize() {
             if (_applying || fullRep.width <= 0 || fullRep.height <= 0) return;
+            if (root.planar) return;   // desktop auto-fits to content; nothing to capture
             if (root.simpleLayout) {
                 Plasmoid.configuration.simplePopupWidth  = Math.round(fullRep.width);
                 Plasmoid.configuration.simplePopupHeight = Math.round(fullRep.height);

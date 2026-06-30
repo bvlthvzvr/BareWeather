@@ -37,7 +37,20 @@ Item {
          - (weatherRoot ? weatherRoot.headerInfoFontSize : 13)) * 0.55)
 
     // Hourly timeline geometry (used for both layout and scroll math)
-    readonly property int hourCardW: Math.round(Kirigami.Units.gridUnit * 5.9)
+    // Card width FLEXES to the visible strip: a whole number of cards fills the
+    // width exactly, so the last card is never chopped off — whatever width the box
+    // ends up (on the desktop it's dictated by the graph layout's size). Falls back
+    // to the base width before the strip has a width. ponytail: targets hour cards;
+    // a day-break divider in view leaves a small remainder, but the common
+    // resting view (today, no midnight in frame) fills cleanly.
+    readonly property int hourCardBaseW: Math.round(Kirigami.Units.gridUnit * 5.9)
+    readonly property int hourCardW: {
+        var avail = hourlyFlick.width;
+        if (avail <= 0) return hourCardBaseW;
+        var n = Math.max(1, Math.round(avail / (hourCardBaseW + hourGap)));   // whole cards that fit
+        return Math.max(Math.round(hourCardBaseW * 0.8),
+                        Math.floor((avail - (n - 1) * hourGap) / n));          // fill the width exactly
+    }
     readonly property int hourCardH: (weatherRoot ? weatherRoot.hourlyIconSize : 32)
                                      + Math.round(Kirigami.Units.gridUnit * 8)
     readonly property int dayBreakW: Math.round(Kirigami.Units.gridUnit * 2.2)

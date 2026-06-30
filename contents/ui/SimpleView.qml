@@ -348,10 +348,14 @@ Item {
             var pv = c < curPrecip.length    ? curPrecip[c]    : 0;
             var sv = c < curSnow.length      ? curSnow[c]      : 0;
             var av = c < curPrecipAmt.length ? curPrecipAmt[c] : 0;
+            // count lines EXACTLY as the readout (roGroup) shows them, or the lift
+            // mismatches: a slot line (snow OR amount) and a chance line that also
+            // shows whenever an amount is present, even below pctLabelMin.
+            var snowShown = sv >= 0.1;
+            var amtShown  = !snowShown && weatherRoot && av > 0 && weatherRoot.precipAmtStr(av) !== "";
             var lines = 0;
-            if (pv >= pctLabelMin) lines++;                                          // % line
-            if (sv >= 0.1) lines++;                                                  // snow line
-            else if (weatherRoot && av > 0 && weatherRoot.precipAmtStr(av) !== "") lines++;  // amount line (incl. trace numbers)
+            if (snowShown || amtShown) lines++;             // slot line
+            if (pv >= pctLabelMin || amtShown) lines++;     // chance line
             if (lines > maxLines) maxLines = lines;
         }
         // ×1.2 (not the readout's full 1.4 line height): the marker's own markGap

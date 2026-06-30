@@ -25,6 +25,9 @@ Row {
         ToolTip.text: switchTooltip
     }
     DotButton {
+        // pinning is meaningless on the desktop (the widget is always shown) — only
+        // the panel popup can be dismissed, so show the pin there only
+        visible: !(root && root.planar)
         checkable: true
         Component.onCompleted: checked = (root ? root.keepOpen : false)
         onToggled: if (root) root.setKeepOpen(checked)
