@@ -115,9 +115,12 @@ Item {
         ? weatherRoot.heroAnim(weatherRoot.weatherCode, weatherRoot.isDay, weatherRoot.cloudCover) : ""
 
     // bumping this re-deals the hourly cards (entrance animation). Fires on
-    // creation (layout switch recreates the view) and on every popup open.
+    // creation, on every popup open, and on becoming visible again — the view is
+    // now kept warm across layout switches (main.qml), so a switch reveals it
+    // rather than rebuilding it; onVisibleChanged replays the intro on that switch.
     property int dealRun: 0
     Component.onCompleted: dealRun++
+    onVisibleChanged: if (visible) dealRun++
     Connections {
         target: full.weatherRoot
         function onExpandedChanged() {
@@ -196,6 +199,26 @@ Item {
         scrollAnim.from = hourlyFlick.contentX;
         scrollAnim.to = target;
         scrollAnim.start();
+    }
+
+    // snap a raw scroll offset to the nearest hour-card left edge, so a drag/
+    // flick/wheel never rests mid-card (which crops the edge cards). Walks the
+    // same running `pos` as dayCardX/leadingDay; day-break dividers aren't snap
+    // targets (you rest on a card, not on a divider). Clamped to the scrollable
+    // range, so the far end stays flush-right.
+    function nearestCardX(x) {
+        var maxX = Math.max(0, hourlyFlick.contentWidth - hourlyFlick.width);
+        x = Math.max(0, Math.min(maxX, x));
+        var pos = 0, best = x, bestDist = Infinity;
+        for (var i = 0; i < timeline.length; ++i) {
+            var e = timeline[i];
+            if (!e.dayBreak) {
+                var d = Math.abs(pos - x);
+                if (d < bestDist) { bestDist = d; best = pos; }
+            }
+            pos += (e.dayBreak ? dayBreakW : hourCardW) + hourGap;
+        }
+        return Math.max(0, Math.min(maxX, best));
     }
 
     ColumnLayout {
@@ -333,6 +356,16 @@ Item {
                         font.bold: true
                         font.pixelSize: weatherRoot ? weatherRoot.conditionFontSize : 26
                     }
+                }
+                // Stale marker: when the shown data has aged past the threshold (fetch
+                // failing), say how old it is instead of passing it off as current.
+                Label {
+                    Layout.alignment: Qt.AlignRight
+                    visible: weatherRoot && weatherRoot.weatherStale
+                    text: weatherRoot ? weatherRoot.staleAgeText() : ""
+                    opacity: 0.6
+                    font.italic: true
+                    font.pixelSize: weatherRoot ? Math.round(weatherRoot.conditionFontSize * 0.5) : 13
                 }
             }
         }
@@ -481,6 +514,18 @@ Item {
                 full.selectedDay = full.leadingDay(contentX);
             }
 
+            // A free drag/flick settles at an arbitrary offset, cropping the cards
+            // at both edges. Snap the resting offset to the nearest card boundary.
+            onMovementEnded: {
+                var t = full.nearestCardX(contentX);
+                if (Math.abs(t - contentX) > 1) {
+                    scrollAnim.stop();
+                    scrollAnim.from = contentX;
+                    scrollAnim.to = t;
+                    scrollAnim.start();
+                }
+            }
+
             // vertical mouse wheel (or touchpad) scrolls the strip horizontally,
             // animated through the same scrollAnim used by tab clicks. One notch
             // (120) moves ~1.4 card pitches; touchpad pixel deltas move 1:1.
@@ -492,10 +537,11 @@ Item {
                     var pd = wheel.pixelDelta.y !== 0 ? wheel.pixelDelta.y : wheel.pixelDelta.x;
                     // accumulate onto the in-flight target so rapid notches stack smoothly
                     var base = scrollAnim.running ? scrollAnim.to : hourlyFlick.contentX;
+                    // mouse notch snaps to whole-card steps so it always rests aligned;
+                    // touchpad pixel deltas stay continuous (clamped) to keep scroll smooth.
                     var targetX = (pd !== 0)
-                        ? base - pd
-                        : base - (ad / 120) * (full.hourCardW + full.hourGap) * 1.4;
-                    targetX = Math.max(0, Math.min(maxX, targetX));
+                        ? Math.max(0, Math.min(maxX, base - pd))
+                        : full.nearestCardX(base - (ad / 120) * (full.hourCardW + full.hourGap) * 1.4);
                     scrollAnim.stop();
                     scrollAnim.from = hourlyFlick.contentX;
                     scrollAnim.to = targetX;

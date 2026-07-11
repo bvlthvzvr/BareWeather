@@ -81,6 +81,8 @@ PlasmoidItem {
     readonly property int    panelIconPercent:   Plasmoid.configuration.panelIconPercent   || 130
     readonly property int    panelFontPercent:   Plasmoid.configuration.panelFontPercent   || 48
     readonly property bool   panelColorIcon:     Plasmoid.configuration.panelColorIcon === true
+    readonly property bool   panelDetailed:      Plasmoid.configuration.panelDetailed === true
+    readonly property int    panelSecondLine:    Plasmoid.configuration.panelSecondLine ?? 0
 
     property real apparentTemp: NaN
     property real humidity:     NaN
@@ -89,9 +91,36 @@ PlasmoidItem {
     property real windSpeed:    NaN   // current wind speed (unit follows temp unit)
     property real windGust:     NaN   // current wind gust (same unit as windSpeed)
     property real precipSumToday: NaN // today's total precipitation, mm
+    property real precipChanceToday: NaN // today's max chance of precipitation, %
     property real snowSumToday:   NaN // today's total snowfall, cm
     property real highTemp:     NaN
     property real lowTemp:      NaN
+
+    // ── Stale-data signal ─────────────────────────────────────────────────
+    // fetchWeather keeps the last-good values on failure (so a blip doesn't blank
+    // the widget), but that means an outage shows hours-old weather as if current —
+    // a fast storm over a frozen "sunny" reads as WRONG, not stale. Track the last
+    // success time and flag data that has aged past the threshold; the panel shows a
+    // small dot so "can't refresh" is visible instead of silently misleading.
+    property double lastGoodFetch: 0        // wall-clock ms of last success (0 = none yet)
+    property double _nowMs: 0               // ticked each minute by staleClock
+    // Floor 30 min, but scale with the refresh interval so a long-refresh user isn't
+    // flagged mid-cycle — ~2 missed fetches before we call it stale.
+    readonly property int staleThresholdMs: Math.max(30, refreshMinutes * 2) * 60000
+    // Only once we HAVE data that has since gone stale — never on first load
+    // (weatherCode < 0) or before the clock's first tick.
+    readonly property bool weatherStale: weatherCode >= 0 && lastGoodFetch > 0
+                                         && _nowMs - lastGoodFetch > staleThresholdMs
+    // "Updated Xh ago" for the full/simple header stale marker (panel uses a dot —
+    // no room for text). Empty until we've had a successful fetch.
+    function staleAgeText() {
+        if (lastGoodFetch <= 0) return "";
+        var mins = Math.floor((_nowMs - lastGoodFetch) / 60000);
+        if (mins < 60) return i18n("Updated %1m ago", mins);
+        var hrs = Math.floor(mins / 60);
+        if (hrs < 24) return i18n("Updated %1h ago", hrs);
+        return i18n("Updated %1d ago", Math.floor(hrs / 24));
+    }
 
     // ── Severe-weather alerts (KDE FOSS Public Alert Server, worldwide) ────
     readonly property bool showAlerts: Plasmoid.configuration.showAlerts
@@ -567,7 +596,7 @@ PlasmoidItem {
                 + "?latitude=" + coarseCoord(lat)
                 + "&longitude=" + coarseCoord(lon)
                 + "&current=temperature_2m,weather_code,apparent_temperature,relative_humidity_2m,is_day,uv_index,precipitation,wind_speed_10m,wind_gusts_10m,cloud_cover"
-                + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,snowfall_sum,sunrise,sunset"
+                + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,snowfall_sum,sunrise,sunset"
                 + "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,uv_index,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover"
                 + "&forecast_days=7"
                 + "&timezone=auto"
@@ -637,6 +666,8 @@ PlasmoidItem {
                     root.lowTemp  = dd.temperature_2m_min[0];
                     root.precipSumToday = (dd.precipitation_sum && dd.precipitation_sum.length)
                                           ? dd.precipitation_sum[0] : NaN;
+                    root.precipChanceToday = (dd.precipitation_probability_max && dd.precipitation_probability_max.length)
+                                          ? dd.precipitation_probability_max[0] : NaN;
                     root.snowSumToday = (dd.snowfall_sum && dd.snowfall_sum.length)
                                         ? dd.snowfall_sum[0] : NaN;
                 }
@@ -663,6 +694,7 @@ PlasmoidItem {
                         });
                     root.allHourly = harr;
                 }
+                root.lastGoodFetch = Date.now();   // stamp success → clears the stale dot
                 // good data — weatherCode is now ≥ 0, so the boot probe stops
             } catch (e) {
                 console.log("Weather: parse error", e);   // probe keeps retrying while weatherCode < 0
@@ -1117,6 +1149,16 @@ PlasmoidItem {
         onTriggered: { root.fetchWeather(); root.fetchAlerts(); }
     }
 
+    // Staleness clock: re-evaluate weatherStale once a minute (60s granularity is
+    // plenty for a 30-min threshold). triggeredOnStart seeds _nowMs immediately.
+    Timer {
+        interval: 60000
+        running: true
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: root._nowMs = Date.now()
+    }
+
     // Day-boundary refresh: re-fetch just after local midnight so the daily array
     // rolls over (Open-Meteo returns days from the current local day). Without it,
     // "Today" keeps pointing at yesterday until the next periodic refresh — up to
@@ -1200,7 +1242,8 @@ PlasmoidItem {
     // implicit/minimum sizing so the popup sizes correctly for either layout.
     fullRepresentation: Item {
         id: fullRep
-        readonly property var view: viewLoader.item
+        readonly property var view: !root.hasLocation ? null
+                                  : (root.simpleLayout ? simpleLoader.item : detailLoader.item)
         // Pin the WIDTH to the saved size once set. We drive the popup window
         // directly (below), but Plasma still follows this implicit size — and the
         // metric readouts change the view's implicit WIDTH on every scroll/pan, so
@@ -1381,21 +1424,38 @@ PlasmoidItem {
         // change — capture writes those on every drag, and re-applying then both
         // fought the drag and yanked the unpinned dimension to its implicit size.
         Component.onCompleted: { Qt.callLater(applySize); armFit(); }
+
+        // Resizing the popup BEFORE the newly-shown view paints stretches the stale
+        // buffer for a frame, so on a switch we resize a couple frames later — the
+        // warm view is already up at the old size, correct content and all.
+        Timer { id: resizeAfterPaint; interval: 48; onTriggered: fullRep.applySize() }
+
         Connections {
             target: root
             function onExpandedChanged()    { if (root.expanded) { Qt.callLater(fullRep.applySize); fullRep.armFit(); } }
-            // switching INTO Simple must auto-fit too (the view + its tabs are laid out
-            // fresh) — not just restore the saved size
-            function onSimpleLayoutChanged() { Qt.callLater(fullRep.applySize); fullRep.armFit(); }
+            // Both views stay warm (loaders below), so a switch just flips which is
+            // visible — no rebuild, no blank frame. Resize after the shown view paints.
+            function onSimpleLayoutChanged() { resizeAfterPaint.restart(); fullRep.armFit(); }
         }
 
+        // Keep BOTH layouts instantiated once a location is set, toggling visibility
+        // instead of swapping a single Loader's sourceComponent. Destroying + recreating
+        // the view on every switch left an empty frame (the "flash"); a warm view paints
+        // the instant it's shown. active:false until hasLocation keeps the lazy-until-
+        // located behaviour and lets the empty-state notice below stand in.
         Loader {
-            id: viewLoader
+            id: detailLoader
             anchors.fill: parent
-            // no weather view until a location is set; the empty-state notice
-            // below stands in (fullRep falls back to a default size when null)
-            sourceComponent: !root.hasLocation ? null
-                           : (root.simpleLayout ? simpleComp : detailComp)
+            active: root.hasLocation
+            visible: !root.simpleLayout
+            sourceComponent: detailComp
+        }
+        Loader {
+            id: simpleLoader
+            anchors.fill: parent
+            active: root.hasLocation
+            visible: root.simpleLayout
+            sourceComponent: simpleComp
         }
         Component { id: detailComp; FullView   { weatherRoot: root } }
         Component { id: simpleComp; SimpleView { weatherRoot: root } }

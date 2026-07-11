@@ -14,6 +14,18 @@ Item {
     readonly property int iconPercent: weatherRoot ? weatherRoot.panelIconPercent : 130
     readonly property int fontPercent: weatherRoot ? weatherRoot.panelFontPercent : 48
 
+    // The bundled Basmilius sun glyph fills its box more than the other condition
+    // icons (same "over-full artwork" issue main.qml's heroScale/iconScale correct
+    // for elsewhere), so it reads oversized in the panel at the same box size next
+    // to e.g. clouds. Scale it down a touch; every other condition, and every other
+    // icon pack, is untouched.
+    function panelIconScale() {
+        if (!weatherRoot || weatherRoot.iconPackId !== "basmilius") return 1.0;
+        var code = weatherRoot.weatherCode, day = weatherRoot.isDay;
+        if ((code === 0 || code === 1) && day !== 0) return 0.85;   // clear sky / sunny (day)
+        return 1.0;
+    }
+
     // White icon by default; colored variant when the panelColorIcon setting is on.
     function panelIconSource() {
         if (!weatherRoot) return "";
@@ -48,7 +60,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         anchors.left: parent.left
         anchors.leftMargin: compact._leftPad
-        spacing: 2
+        spacing: 0
 
         // Bundled white SVG packs render flat via a plain Image (no icon-engine
         // recolouring); theme packs need Kirigami.Icon to resolve "weather-*"
@@ -57,7 +69,7 @@ Item {
             id: icon
             visible: weatherRoot && weatherRoot.hasLocation && !weatherRoot.iconPackIsTheme
             anchors.verticalCenter: parent.verticalCenter
-            height: Math.round(compact.height * compact.iconPercent / 100)
+            height: Math.round(compact.height * compact.iconPercent / 100 * compact.panelIconScale())
             width: height
             sourceSize.width: width
             sourceSize.height: height
@@ -77,10 +89,107 @@ Item {
         Text {
             id: temp
             anchors.verticalCenter: parent.verticalCenter
+            visible: weatherRoot && !weatherRoot.panelDetailed && text.length > 0 && weatherRoot.hasLocation
             text: weatherRoot ? weatherRoot.temperatureText : "—"
             color: Kirigami.Theme.textColor
             font.pixelSize: Math.round(compact.height * compact.fontPercent / 100)
-            visible: text.length > 0 && weatherRoot && weatherRoot.hasLocation
         }
+
+        // Detailed layout: big bold "96°" on the left, with a smaller muted
+        // stack ("H 99°" over "L 74°", or the precip line) to its right.
+        Row {
+            id: detailedCol
+            anchors.verticalCenter: parent.verticalCenter
+            visible: weatherRoot && weatherRoot.panelDetailed && weatherRoot.hasLocation
+            spacing: 6
+            Text {
+                anchors.verticalCenter: parent.verticalCenter
+                text: weatherRoot ? weatherRoot.temperatureText : "—"
+                color: Kirigami.Theme.textColor
+                font.pixelSize: Math.round(compact.height * 0.68)
+            }
+            // Right stack: bold condition word always on top; the second line
+            // switches between "low / high" and precip via the panelSecondLine setting.
+            Column {
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: -3
+                Text {
+                    text: weatherRoot ? weatherRoot.conditionText(weatherRoot.weatherCode, weatherRoot.isDay) : ""
+                    color: Kirigami.Theme.textColor
+                    font.bold: true
+                    font.pixelSize: Math.round(compact.height * 0.40)
+                }
+                // Second line, option A: low / high temperature. With the colored
+                // panel icon on, tint L blue and H warm (matching FullView's temps).
+                Text {
+                    visible: weatherRoot && weatherRoot.panelSecondLine === 0
+                    textFormat: Text.StyledText
+                    text: {
+                        if (!weatherRoot || isNaN(weatherRoot.lowTemp) || isNaN(weatherRoot.highTemp))
+                            return "";
+                        var L = Math.round(weatherRoot.lowTemp), H = Math.round(weatherRoot.highTemp);
+                        return weatherRoot.panelColorIcon
+                            ? "<font color='" + weatherRoot.precipColor + "'>L</font>" + L + "&nbsp;&nbsp;&nbsp;"
+                              + "<font color='#ff6e40'>H</font>" + H
+                            : "L" + L + "&nbsp;&nbsp;&nbsp;H" + H;
+                    }
+                    color: Kirigami.Theme.textColor
+                    opacity: 0.7
+                    font.bold: true
+                    font.pixelSize: Math.round(compact.height * 0.37)
+                }
+                // Second line, option B: "chance / amount" for today. With the colored
+                // panel icon on, tint both numbers blue but leave the "/" theme-colored.
+                Text {
+                    visible: weatherRoot && weatherRoot.panelSecondLine === 1
+                             && !isNaN(weatherRoot.precipChanceToday)
+                    textFormat: Text.StyledText
+                    text: {
+                        if (!weatherRoot) return "";
+                        var c = Math.round(weatherRoot.precipChanceToday) + "%";
+                        var a = weatherRoot.precipUnitStr(weatherRoot.precipSumToday, false);
+                        return weatherRoot.panelColorIcon
+                            ? "<font color='" + weatherRoot.precipColor + "'>" + c + "</font> / "
+                              + "<font color='" + weatherRoot.precipColor + "'>" + a + "</font>"
+                            : c + " / " + a;
+                    }
+                    color: Kirigami.Theme.textColor
+                    opacity: 0.7
+                    font.bold: true
+                    font.pixelSize: Math.round(compact.height * 0.37)
+                }
+                // Second line, option C: wind + gust → "34 G12 mph".
+                Text {
+                    visible: weatherRoot && weatherRoot.panelSecondLine === 2
+                             && !isNaN(weatherRoot.windSpeed)
+                    text: weatherRoot
+                        ? Math.round(weatherRoot.windSpeed)
+                          + (isNaN(weatherRoot.windGust) ? "" : " G" + Math.round(weatherRoot.windGust))
+                          + " " + (weatherRoot.units === "fahrenheit" ? "mph" : "km/h")
+                        : ""
+                    color: Kirigami.Theme.textColor
+                    opacity: 0.7
+                    font.bold: true
+                    font.pixelSize: Math.round(compact.height * 0.37)
+                }
+            }
+        }
+    }
+
+    // Stale-data marker: a small muted dot in the top-right corner when the shown
+    // weather has aged past the threshold (weatherRoot.weatherStale) — i.e. the fetch
+    // is failing and we're showing last-known values. Absent when data is fresh.
+    Rectangle {
+        visible: weatherRoot && weatherRoot.weatherStale
+        anchors.top: parent.top
+        anchors.right: parent.right
+        width: Math.max(4, Math.round(compact.height * 0.14))
+        height: width
+        radius: width / 2
+        color: Kirigami.Theme.disabledTextColor
+        // thin contrasting ring so it reads over both the icon and the temperature
+        border.width: Math.max(1, Math.round(width * 0.18))
+        border.color: Kirigami.Theme.backgroundColor
+        opacity: 0.9
     }
 }

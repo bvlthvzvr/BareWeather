@@ -62,6 +62,8 @@ Item {
     property alias cfg_panelIconPercent:   panelIconSpin.value
     property alias cfg_panelFontPercent:   panelFontSpin.value
     property alias cfg_panelColorIcon:     panelColorCheck.checked
+    property alias cfg_panelDetailed:      panelDetailedCheck.checked
+    property alias cfg_panelSecondLine:    panelSecondLineCombo.currentIndex
 
     // shared options for the header-metric dropdowns (id ↔ label)
     readonly property var metricOptions: [
@@ -311,7 +313,7 @@ Item {
                         }
                         ConfigComboBox {
                             id: detMetric1
-                            Kirigami.FormData.label: i18n("Line 1:")
+                            Kirigami.FormData.label: i18n("Element 1:")
                             textRole: "text"
                             model: page.detailMetricOptions
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric1)
@@ -319,7 +321,7 @@ Item {
                         }
                         ConfigComboBox {
                             id: detMetric2
-                            Kirigami.FormData.label: i18n("Line 2:")
+                            Kirigami.FormData.label: i18n("Element 2:")
                             textRole: "text"
                             model: page.detailMetricOptions
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric2)
@@ -327,7 +329,7 @@ Item {
                         }
                         ConfigComboBox {
                             id: detMetric3
-                            Kirigami.FormData.label: i18n("Line 3:")
+                            Kirigami.FormData.label: i18n("Element 3:")
                             textRole: "text"
                             model: page.detailMetricOptions
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric3)
@@ -335,7 +337,7 @@ Item {
                         }
                         ConfigComboBox {
                             id: detMetric4
-                            Kirigami.FormData.label: i18n("Line 4:")
+                            Kirigami.FormData.label: i18n("Element 4:")
                             textRole: "text"
                             model: page.detailMetricOptions
                             Component.onCompleted: currentIndex = page.detailMetricIndexOf(page.cfg_headerMetric4)
@@ -373,7 +375,7 @@ Item {
                         }
                         ConfigComboBox {
                             id: hourMetric1
-                            Kirigami.FormData.label: i18n("Line 1:")
+                            Kirigami.FormData.label: i18n("Element 1:")
                             textRole: "text"
                             model: page.hourlyMetricOptions
                             Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric1)
@@ -397,7 +399,7 @@ Item {
                         }
                         ConfigComboBox {
                             id: hourMetric2
-                            Kirigami.FormData.label: i18n("Line 2:")
+                            Kirigami.FormData.label: i18n("Element 2:")
                             textRole: "text"
                             model: page.hourlyMetricOptions
                             Component.onCompleted: currentIndex = page.hourlyMetricIndexOf(page.cfg_hourlyMetric2)
@@ -426,7 +428,10 @@ Item {
             // ── Simple layout ──
             ScrollView {
                 contentWidth: availableWidth
-                Kirigami.FormLayout {
+                RowLayout {
+                    spacing: Kirigami.Units.gridUnit * 2
+                    Kirigami.FormLayout {
+                    Layout.alignment: Qt.AlignTop
                     ConfigSpinBox {
                         id: simpleDaysSpin
                         Kirigami.FormData.label: i18n("Forecast days:")
@@ -502,7 +507,7 @@ Item {
                     }
                     ConfigComboBox {
                         id: graphColorCombo
-                        Kirigami.FormData.label: i18n("Graph coloring:")
+                        Kirigami.FormData.label: i18n("Graph Color:")
                         // index maps directly to graphColorMode (0..3)
                         model: [
                             i18n("Temperature & precipitation"),
@@ -512,9 +517,19 @@ Item {
                         ]
                     }
 
-                    Kirigami.Separator {
-                        Kirigami.FormData.label: i18n("Weather Elements (up to 4)")
+                    }
+                    Kirigami.FormLayout {
+                    Layout.alignment: Qt.AlignTop
+                    Layout.leftMargin: Kirigami.Units.gridUnit * 1
+                    RowLayout {
+                        // inline section header (mirrors the Cards tab)
                         Kirigami.FormData.isSection: true
+                        Layout.fillWidth: true
+                        Kirigami.Heading {
+                            level: 5
+                            text: i18n("Weather Elements (up to 4)")
+                        }
+                        Item { Layout.fillWidth: true }
                     }
                     ConfigSpinBox {
                         id: simpHeaderFontSpin
@@ -525,7 +540,7 @@ Item {
                     }
                     ConfigComboBox {
                         id: simpMetric1
-                        Kirigami.FormData.label: i18n("Line 1:")
+                        Kirigami.FormData.label: i18n("Element 1:")
                         textRole: "text"
                         model: page.metricOptions
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric1)
@@ -533,7 +548,7 @@ Item {
                     }
                     ConfigComboBox {
                         id: simpMetric2
-                        Kirigami.FormData.label: i18n("Line 2:")
+                        Kirigami.FormData.label: i18n("Element 2:")
                         textRole: "text"
                         model: page.metricOptions
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric2)
@@ -541,7 +556,7 @@ Item {
                     }
                     ConfigComboBox {
                         id: simpMetric3
-                        Kirigami.FormData.label: i18n("Line 3:")
+                        Kirigami.FormData.label: i18n("Element 3:")
                         textRole: "text"
                         model: page.metricOptions
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric3)
@@ -549,7 +564,7 @@ Item {
                     }
                     ConfigComboBox {
                         id: simpMetric4
-                        Kirigami.FormData.label: i18n("Line 4:")
+                        Kirigami.FormData.label: i18n("Element 4:")
                         textRole: "text"
                         model: page.metricOptions
                         Component.onCompleted: currentIndex = page.metricIndexOf(page.cfg_simpleHeaderMetric4)
@@ -565,6 +580,7 @@ Item {
                             page.cfg_simpleHeaderMetric4 = "none"; simpMetric4.currentIndex = 0;
                         }
                     }
+                    }
                 }
             }
 
@@ -574,14 +590,14 @@ Item {
                 Kirigami.FormLayout {
                     ConfigSpinBox {
                         id: panelIconSpin
-                        Kirigami.FormData.label: i18n("Panel icon size (% of height):")
+                        Kirigami.FormData.label: i18n("Panel icon size:")
                         from: 50
                         to: 200
                         stepSize: 5
                     }
                     ConfigSpinBox {
                         id: panelFontSpin
-                        Kirigami.FormData.label: i18n("Panel temperature font (% of height):")
+                        Kirigami.FormData.label: i18n("Panel temperature font:")
                         from: 20
                         to: 90
                         stepSize: 2
@@ -589,7 +605,22 @@ Item {
                     CheckBox {
                         id: panelColorCheck
                         Kirigami.FormData.label: i18n("Icon color:")
-                        text: i18n("Use colored icon (instead of white)")
+                        text: i18n("Use colored icon")
+                    }
+                    CheckBox {
+                        id: panelDetailedCheck
+                        Kirigami.FormData.label: i18n("Panel:")
+                        text: i18n("Detailed View")
+                    }
+                    ConfigComboBox {
+                        id: panelSecondLineCombo
+                        enabled: panelDetailedCheck.checked
+                        // index maps directly to panelSecondLine (0 = H/L, 1 = precip, 2 = wind)
+                        model: [
+                            i18n("High / low temperature"),
+                            i18n("Precipitation (chance / amount)"),
+                            i18n("Wind (speed / gust)")
+                        ]
                     }
                 }
             }

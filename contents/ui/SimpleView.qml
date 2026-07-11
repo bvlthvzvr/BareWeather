@@ -695,6 +695,9 @@ Item {
         revealAnim.restart();
     }
     Component.onCompleted: entranceReveal()
+    // kept warm across layout switches now, so replay the curve reveal when the
+    // view is shown again rather than relying on recreation
+    onVisibleChanged: if (visible) entranceReveal()
     Connections {
         target: simple.weatherRoot
         function onExpandedChanged() {
@@ -964,6 +967,16 @@ Item {
                     }
                 }
 
+                // Stale marker (see main.qml weatherStale). Simple layout has no
+                // location line to hang it on, so it sits under the icon/temp block.
+                Label {
+                    visible: weatherRoot && weatherRoot.weatherStale
+                    text: weatherRoot ? weatherRoot.staleAgeText() : ""
+                    opacity: 0.6
+                    font.italic: true
+                    font.pixelSize: weatherRoot ? weatherRoot.simpleHeaderInfoFontSize : 13
+                    Layout.topMargin: -Math.round(Kirigami.Units.gridUnit * 0.3)
+                }
             }
 
             Item { Layout.fillWidth: true }
@@ -1524,6 +1537,10 @@ Item {
                             readonly property int g: simple.windowBase + index - 1
                             readonly property var modelData: (g >= 0 && g < simple.samples.length) ? simple.samples[g] : null
                             readonly property real lineX: simple.hourX(g)
+                            // day-representative forecast entry (matches the Card day
+                            // tab), keyed by the marker's date rather than the 00:00 code
+                            readonly property var dayEntry: (weatherRoot && modelData)
+                                ? weatherRoot.dailyData[weatherRoot.dayIndexForDate(modelData.date)] : null
                             visible: modelData !== null && simple.isDayStart(g)
                                      && lineX > -width && lineX < plot.width + width
                             spacing: Kirigami.Units.smallSpacing
@@ -1539,8 +1556,8 @@ Item {
                                 height: width
                                 roundToIconSize: false   // render at the exact size; don't snap to 22/32
                                 anchors.verticalCenter: parent.verticalCenter
-                                source: (weatherRoot && parent.modelData)
-                                        ? weatherRoot.conditionIcon(parent.modelData.code, parent.modelData.day, parent.modelData.cloud)
+                                source: (weatherRoot && parent.dayEntry)
+                                        ? weatherRoot.conditionIcon(parent.dayEntry.code, 1)
                                         : "weather-clear-night"
                             }
                             Label {

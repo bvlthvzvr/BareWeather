@@ -263,7 +263,7 @@ ScrollView {
                         var name = d.city && d.city.length ? d.city : "";
                         page._autoUnitFor(d.country_code || d.country);   // first-setup: °F/°C from country (before _setLocation)
                         page._setLocation(name, lat, lon);
-                        page.detectStatus = i18n("Detected: %1°, %2°", lat.toFixed(3), lon.toFixed(3));
+                        page.detectStatus = "";   // coords now shown in the Manual fields below
                         return;
                     }
                 } catch (e) {}
