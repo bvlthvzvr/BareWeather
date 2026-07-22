@@ -7,8 +7,8 @@ A simple, interactive weather widget that minds its own business. For KDE Plasma
 **Card Layout**
 - **Animated Icons** - All icons in header, day tabs, and hourly cards are animated (Can be toggled off) 
 - **Color Coded headers** - Weather element headers are color coded with the conditions and synced to the hour as you scroll or drag through the timeline, or to the day as you switch day tabs.  
-- **Daily Forecast** - Glance across the tabs and the icons give you the gist of the day's condition and temperature. Choose your starting hour between 12AM or 6AM when switching day tabs so the timeline opens closer to when you start the day.
-- **Hourly cards** - Scroll or drag through the whole forecast, the day tabs keep pace.  Cards are color coded when there is snow, rain, or a mixture of both.
+- **Daily Forecast** - Glance across the tabs and the icons give you the gist of the day's condition and temperature. Choose the starting hour between 12AM or 6AM when switching day tabs so the timeline opens closer to when you start the day.
+- **Hourly cards** - Scroll or drag through the whole forecast, the day tabs follows.  Cards are color coded when there is snow, rain, or a mixture of both.
 <img width="628" height="456" alt="untitled33" src="https://github.com/user-attachments/assets/ac8539cc-4074-48bc-a53b-68ce5523c393" />
 
 
@@ -22,9 +22,9 @@ A simple, interactive weather widget that minds its own business. For KDE Plasma
 
 
 **Graph Layout**
-- **Temperature Curve** - A quick glance over the next 12 hours forecast. The curve reshapes as you scroll or drag through the hour and day. 
-- **Precipitation Curve** - A separate curve in blue representing the precipitation chance throughout the days. The curve also shows the precipitation amount when it detects it. The curve tints toward white when there is snow. 
-- **Day Tabs** - Switching to a different day and the curve morphs to that day's shape. 
+- **Temperature Curve** - A quick glance over the next 12 hours forecast. The curve animates as you scroll or drag through the hour and day. 
+- **Precipitation Curve** - A separate curve in blue representing the precipitation chance throughout the forecast. The curve also shows the precipitation amount when it detects it. The curve tints toward white when there is snow. 
+- **Day Tabs** - The curve animates when switching between days.
 - **Timeline** - Pick how dense the curve is between displaying every hour or every 2 hours. 
 <img width="758" height="458" alt="untitled" src="https://github.com/user-attachments/assets/7e58dc9b-17cc-4c72-aeb8-d4ded116bd6b" />
 
@@ -46,11 +46,11 @@ Pared to the bare necessities. **No account, no API key, nor does it offer other
 | **Mullvad** (`am.i.mullvad.net`)                                                                       | guessing your location from your IP                                 | **only** if you use *Auto-detect*                                                        |
 
 
-**What's done to enhance privacy:**
-- **Auto-detect and alerts are both off by default**. The widget makes no IP-geolocation call and no alert request at all until you use them.
+**What's done on privacy:**
+- **Auto-detect and alerts are both off by default**. The widget makes no IP-geolocation call and no alert request until you use them.
 - The only IP-geolocation provider is Mullvad, picked because it's a privacy
   company with a public no-logging stance.
-- Weather alerts come from KDE Public Alert Server. **It collects official severe weather warnings in CAP format from agencies around the world into one place, so you get worldwide alerts without ever contacting, or exposing yourself to each individual agency.**
+- Weather alerts come from KDE Public Alert Server. **It collects official severe weather warnings  around the world so you get worldwide alerts without contacting, or exposing yourself to each individual agency.**
 - **No map picker** as it requires dependency to use them.  And exposes your IP to something the auto detection and manual location lookup already handles.
 - **Coordinates get rounded to about 1 km/.62mi (2 decimals)** on every weather and alert
   request, **even if you enter the exact coordinate**. 

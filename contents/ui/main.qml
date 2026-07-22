@@ -83,12 +83,26 @@ PlasmoidItem {
     readonly property bool   panelColorIcon:     Plasmoid.configuration.panelColorIcon === true
     readonly property bool   panelDetailed:      Plasmoid.configuration.panelDetailed === true
     readonly property int    panelSecondLine:    Plasmoid.configuration.panelSecondLine ?? 0
+    // Detailed-panel font sizes, % of panel height: the bold condition word and
+    // the second line chosen by panelSecondLine.
+    readonly property int    panelConditionPercent:  Plasmoid.configuration.panelConditionPercent  || 40
+    readonly property int    panelSecondLinePercent: Plasmoid.configuration.panelSecondLinePercent || 37
+
+    // Wind speed unit. "auto" follows the temperature unit (mph with °F, km/h
+    // with °C) — what the widget always did; "kmh"/"mph"/"ms" pin it instead.
+    // windUnitApi goes straight into the Open-Meteo query, windUnitLabel is
+    // what the UI prints.
+    readonly property string windUnit:    Plasmoid.configuration.windUnit || "auto"
+    readonly property string windUnitApi: (windUnit !== "auto") ? windUnit
+                                        : (units === "fahrenheit" ? "mph" : "kmh")
+    readonly property string windUnitLabel: (windUnitApi === "mph") ? "mph"
+                                          : (windUnitApi === "ms")  ? "m/s" : "km/h"
 
     property real apparentTemp: NaN
     property real humidity:     NaN
     property real uvIndex:      NaN
     property real precipRate:   NaN   // current precipitation, mm/h
-    property real windSpeed:    NaN   // current wind speed (unit follows temp unit)
+    property real windSpeed:    NaN   // current wind speed (unit = windUnitApi)
     property real windGust:     NaN   // current wind gust (same unit as windSpeed)
     property real precipSumToday: NaN // today's total precipitation, mm
     property real precipChanceToday: NaN // today's max chance of precipitation, %
@@ -167,7 +181,7 @@ PlasmoidItem {
         var t = a.event;
         if (a.ends) {
             var d = new Date(a.ends);
-            if (!isNaN(d.getTime())) t += " " + i18n("until %1", d.toLocaleString(Qt.locale(), "ddd h:mm AP"));
+            if (!isNaN(d.getTime())) t += " " + i18n("until %1", d.toLocaleString(Qt.locale(), use24Hour ? "ddd H:mm" : "ddd h:mm AP"));
         }
         return t;
     }
@@ -207,6 +221,8 @@ PlasmoidItem {
     readonly property int simpleHeaderInfoFontSize: Plasmoid.configuration.simpleHeaderInfoFontSize || 12
     // Simple-layout graph hour-axis label font (the "6 PM 7 PM …" row)
     readonly property int simpleHourFontSize: Plasmoid.configuration.simpleHourFontSize || 13
+    // clock format toggle: true = 24-hour ("21"), false = 12-hour ("9PM")
+    readonly property bool use24Hour: Plasmoid.configuration.use24Hour
     // Simple-layout graph per-point temperature label font (the "41° 40° …");
     // decoupled from the Detailed cards' hourlyTempFontSize.
     readonly property int simpleGraphTempFontSize: Plasmoid.configuration.simpleGraphTempFontSize || 16
@@ -422,7 +438,7 @@ PlasmoidItem {
             // card while the header hides it). Skips a redundant "5 G5" on calm hours.
             var gs = (hourSample && !isNaN(hourSample.gust)) ? hourSample.gust : windGust;
             var windBody = (!isNaN(gs) && Math.round(gs) > Math.round(ws))
-                ? (Math.round(ws) + " G" + Math.round(gs) + " " + (units === "fahrenheit" ? "mph" : "km/h"))
+                ? (Math.round(ws) + " G" + Math.round(gs) + " " + windUnitLabel)
                 : windLabel(ws);
             return i18n("Wind: %1", "<b>" + windBody + "</b>");
         }
@@ -460,19 +476,20 @@ PlasmoidItem {
 
     function tempStr(t) { return isNaN(t) ? "—" : (Math.round(t) + "°"); }
 
-    // ISO local time string → "9PM"
-    function formatHour(iso) { return new Date(iso).toLocaleTimeString(Qt.locale(), "hAP"); }
-    // compact clock for the combined sun line: "5:23a" / "8:23p" (no space, no "M")
+    // ISO local time string → "9PM" (12h) or "19:00" (24h)
+    function formatHour(iso) { return new Date(iso).toLocaleTimeString(Qt.locale(), use24Hour ? "H:mm" : "hAP"); }
+    // compact clock for the combined sun line: "5:23a" / "8:23p" (12h) or "5:23" / "20:23" (24h)
     function _sunClock(iso) {
         var d = new Date(iso);
-        return isNaN(d.getTime()) ? "" :
-            d.toLocaleTimeString(Qt.locale(), "h:mm AP").replace(/\s*AM/, "a").replace(/\s*PM/, "p");
+        if (isNaN(d.getTime())) return "";
+        if (use24Hour) return d.toLocaleTimeString(Qt.locale(), "H:mm");
+        return d.toLocaleTimeString(Qt.locale(), "h:mm AP").replace(/\s*AM/, "a").replace(/\s*PM/, "p");
     }
 
-    // Wind speed → "6.0 mph" / "12.3 km/h" (unit follows the temperature unit).
+    // Wind speed → "6.0 mph" / "12.3 km/h" / "3.4 m/s" (see windUnit).
     function windLabel(speed) {
         if (isNaN(speed)) return "";
-        return (Math.round(speed * 10) / 10) + " " + (units === "fahrenheit" ? "mph" : "km/h");
+        return (Math.round(speed * 10) / 10) + " " + windUnitLabel;
     }
 
     // Wind-direction arrow as a Weather Icons font glyph (the glyph already
@@ -546,6 +563,21 @@ PlasmoidItem {
         return null;
     }
 
+    // Current-condition icon inputs for the header hero. Open-Meteo's live
+    // `current.weather_code` is a nowcast that can read "overcast" while the current
+    // HOUR's forecast (and so the first hourly card) already shows rain — they
+    // disagree hour-marginally. Drive the hero off the current-hour sample through
+    // precipAwareCode, exactly like the cards, so the header glyph can never
+    // contradict the first card. The header metric row already falls back to
+    // currentHourSample; this puts the icon on the same source. Falls back to the
+    // live `current` block before the hourly array exists.
+    readonly property int heroCode: currentHourSample
+        ? precipAwareCode(currentHourSample.code, currentHourSample.precip,
+                          currentHourSample.precipAmt, currentHourSample.snow, currentHourSample.temp)
+        : weatherCode
+    readonly property int  heroDay:   currentHourSample ? currentHourSample.day   : isDay
+    readonly property real heroCloud: currentHourSample ? currentHourSample.cloud : cloudCover
+
     // All hourly entries across the configured days, sampled every `step` hours
     // (00:00, 02:00, …) — the continuous data for the simple-layout graph.
     // `days` overrides the day span (defaults to dailyDays).
@@ -600,7 +632,7 @@ PlasmoidItem {
                 + "&hourly=temperature_2m,apparent_temperature,weather_code,is_day,relative_humidity_2m,uv_index,precipitation_probability,precipitation,snowfall,wind_speed_10m,wind_direction_10m,wind_gusts_10m,cloud_cover"
                 + "&forecast_days=7"
                 + "&timezone=auto"
-                + "&wind_speed_unit=" + (units === "fahrenheit" ? "mph" : "kmh")
+                + "&wind_speed_unit=" + windUnitApi
                 + "&temperature_unit=" + (units === "fahrenheit" ? "fahrenheit" : "celsius");
         // Abandon any still-in-flight request first. At boot the free-running
         // boot probe (below) re-fires on its OWN schedule whether or not the
@@ -1213,6 +1245,7 @@ PlasmoidItem {
         function onLatitudeChanged()        { root.fetchWeather(); root.weatherAlerts = []; alertsDebounce.restart(); }
         function onLongitudeChanged()       { root.fetchWeather(); root.weatherAlerts = []; alertsDebounce.restart(); }
         function onTemperatureUnitChanged() { root.fetchWeather(); }
+        function onWindUnitChanged()        { root.fetchWeather(); }
         function onShowAlertsChanged()      { root.fetchAlerts(); }
         // On first-time setup, lat/lon and locationConfigured commit together on
         // Apply in an unspecified order — fetch on the flag too so weather always

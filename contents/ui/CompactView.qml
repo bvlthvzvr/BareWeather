@@ -13,6 +13,11 @@ Item {
 
     readonly property int iconPercent: weatherRoot ? weatherRoot.panelIconPercent : 130
     readonly property int fontPercent: weatherRoot ? weatherRoot.panelFontPercent : 48
+    // Detailed layout only: condition word and second line, each its own % of height.
+    readonly property int _condPx: Math.round(compact.height
+        * (weatherRoot ? weatherRoot.panelConditionPercent : 40) / 100)
+    readonly property int _line2Px: Math.round(compact.height
+        * (weatherRoot ? weatherRoot.panelSecondLinePercent : 37) / 100)
 
     // The bundled Basmilius sun glyph fills its box more than the other condition
     // icons (same "over-full artwork" issue main.qml's heroScale/iconScale correct
@@ -21,7 +26,7 @@ Item {
     // icon pack, is untouched.
     function panelIconScale() {
         if (!weatherRoot || weatherRoot.iconPackId !== "basmilius") return 1.0;
-        var code = weatherRoot.weatherCode, day = weatherRoot.isDay;
+        var code = weatherRoot.heroCode, day = weatherRoot.heroDay;
         if ((code === 0 || code === 1) && day !== 0) return 0.85;   // clear sky / sunny (day)
         return 1.0;
     }
@@ -30,13 +35,13 @@ Item {
     function panelIconSource() {
         if (!weatherRoot) return "";
         if (!weatherRoot.hasLocation) return "mark-location";   // no location set → pin, not fake weather
-        var code = weatherRoot.weatherCode, day = weatherRoot.isDay;
+        var code = weatherRoot.heroCode, day = weatherRoot.heroDay;
         // panel-only: show the moon-behind-cloud icon for overcast night (the
         // popup keeps its own overcast-night artwork).
         var override = (code === 3 && day === 0) ? "wi-night-alt-partly-cloudy" : undefined;
         return weatherRoot.panelColorIcon
-            ? weatherRoot.conditionIcon(code, day, weatherRoot.cloudCover, override)
-            : weatherRoot.conditionIconWhite(code, day, weatherRoot.cloudCover, override);
+            ? weatherRoot.conditionIcon(code, day, weatherRoot.heroCloud, override)
+            : weatherRoot.conditionIconWhite(code, day, weatherRoot.heroCloud, override);
     }
 
     // Force the panel to allocate exactly the content width + side padding, so
@@ -114,10 +119,10 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 spacing: -3
                 Text {
-                    text: weatherRoot ? weatherRoot.conditionText(weatherRoot.weatherCode, weatherRoot.isDay) : ""
+                    text: weatherRoot ? weatherRoot.conditionText(weatherRoot.heroCode, weatherRoot.heroDay) : ""
                     color: Kirigami.Theme.textColor
                     font.bold: true
-                    font.pixelSize: Math.round(compact.height * 0.40)
+                    font.pixelSize: compact._condPx
                 }
                 // Second line, option A: low / high temperature. With the colored
                 // panel icon on, tint L blue and H warm (matching FullView's temps).
@@ -136,7 +141,7 @@ Item {
                     color: Kirigami.Theme.textColor
                     opacity: 0.7
                     font.bold: true
-                    font.pixelSize: Math.round(compact.height * 0.37)
+                    font.pixelSize: compact._line2Px
                 }
                 // Second line, option B: "chance / amount" for today. With the colored
                 // panel icon on, tint both numbers blue but leave the "/" theme-colored.
@@ -156,7 +161,7 @@ Item {
                     color: Kirigami.Theme.textColor
                     opacity: 0.7
                     font.bold: true
-                    font.pixelSize: Math.round(compact.height * 0.37)
+                    font.pixelSize: compact._line2Px
                 }
                 // Second line, option C: wind + gust → "34 G12 mph".
                 Text {
@@ -165,12 +170,12 @@ Item {
                     text: weatherRoot
                         ? Math.round(weatherRoot.windSpeed)
                           + (isNaN(weatherRoot.windGust) ? "" : " G" + Math.round(weatherRoot.windGust))
-                          + " " + (weatherRoot.units === "fahrenheit" ? "mph" : "km/h")
+                          + " " + weatherRoot.windUnitLabel
                         : ""
                     color: Kirigami.Theme.textColor
                     opacity: 0.7
                     font.bold: true
-                    font.pixelSize: Math.round(compact.height * 0.37)
+                    font.pixelSize: compact._line2Px
                 }
             }
         }

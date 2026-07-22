@@ -37,6 +37,14 @@
     <entry name="unitConfigured" type="Bool">
       <default>false</default>
     </entry>
+    <!-- wind speed unit: auto (follows temperatureUnit), kmh, mph or ms -->
+    <entry name="windUnit" type="String">
+      <default>auto</default>
+    </entry>
+    <!-- show clock times in 24-hour format; default false = 12-hour with AM/PM -->
+    <entry name="use24Hour" type="Bool">
+      <default>false</default>
+    </entry>
     <entry name="dailyDays" type="Int">
       <default>5</default>
     </entry>
@@ -200,6 +208,13 @@
     <!-- detailed panel second line: 0 = H/L temperature, 1 = precip chance / amount, 2 = wind speed / gust -->
     <entry name="panelSecondLine" type="Int">
       <default>0</default>
+    </entry>
+    <!-- detailed-panel font sizes, as a % of panel height (condition word / second line) -->
+    <entry name="panelConditionPercent" type="Int">
+      <default>40</default>
+    </entry>
+    <entry name="panelSecondLinePercent" type="Int">
+      <default>37</default>
     </entry>
     <!-- condition-icon pack: "basmilius" (bundled SVG), "system" (theme weather-* icons), or "custom" -->
     <entry name="iconPack" type="String">

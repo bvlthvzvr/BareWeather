@@ -23,7 +23,7 @@ Item {
     // animated hero for the current condition (or "" → static fallback icon).
     // Gated by the simple-layout header-animation toggle.
     readonly property string heroAnimSrc: (weatherRoot && weatherRoot.simpleHeaderAnim)
-        ? weatherRoot.heroAnim(weatherRoot.weatherCode, weatherRoot.isDay, weatherRoot.cloudCover) : ""
+        ? weatherRoot.heroAnim(weatherRoot.heroCode, weatherRoot.heroDay, weatherRoot.heroCloud) : ""
 
     // `hourPos` is the left-edge position (in sample-index units) of the sliding
     // window over the continuous timeline; the columns stay fixed and the curve
@@ -327,11 +327,14 @@ Item {
         if (isNaN(sampleT0Ms) || isNaN(sampleStepMs) || sampleStepMs <= 0 || nPts < 1) return NaN;
         return ((ms - sampleT0Ms) / sampleStepMs - hourPos + 0.5) * (plotW / nPts);
     }
-    // compact 12h sun-event time, matching the AM/PM hour axis: "6:18a" / "7:48p"
+    // compact sun-event time, matching the hour axis: "6:18a" / "7:48p" (12h) or
+    // "6:18" / "19:48" (24h)
     function sunTimeLabel(ms) {
         var d = new Date(ms), h = d.getHours(), m = d.getMinutes();
+        var mm = (m < 10 ? "0" + m : m);
+        if (weatherRoot && weatherRoot.use24Hour) return h + ":" + mm;
         var h12 = h % 12; if (h12 === 0) h12 = 12;
-        return h12 + ":" + (m < 10 ? "0" + m : m) + (h < 12 ? "a" : "p");
+        return h12 + ":" + mm + (h < 12 ? "a" : "p");
     }
     // Extra height to lift a sun marker so it clears the per-hour precip/snow/amount
     // readouts that sit above the temp number — a sun glyph straddles up to a couple
@@ -885,7 +888,7 @@ Item {
                     Item {
                         // hero size, shrunk for the visually-heavy clear-night moon
                         readonly property int sz: Math.round((weatherRoot ? weatherRoot.simpleHeroIconSize : 68)
-                            * (weatherRoot ? weatherRoot.heroScale(weatherRoot.weatherCode, weatherRoot.isDay) : 1))
+                            * (weatherRoot ? weatherRoot.heroScale(weatherRoot.heroCode, weatherRoot.heroDay) : 1))
                         Layout.preferredWidth: sz
                         Layout.preferredHeight: sz
                         Layout.alignment: Qt.AlignVCenter
@@ -893,11 +896,11 @@ Item {
 
                         Kirigami.Icon {
                             anchors.centerIn: parent
-                            width: Math.round(parent.width * (weatherRoot ? weatherRoot.staticIconZoom(weatherRoot.weatherCode, weatherRoot.isDay) : 1))
+                            width: Math.round(parent.width * (weatherRoot ? weatherRoot.staticIconZoom(weatherRoot.heroCode, weatherRoot.heroDay) : 1))
                             height: width
                             roundToIconSize: false   // honor the exact zoom; don't snap to 32/48
                             visible: simple.heroAnimSrc.length === 0
-                            source: weatherRoot ? weatherRoot.conditionIcon(weatherRoot.weatherCode, weatherRoot.isDay, weatherRoot.cloudCover)
+                            source: weatherRoot ? weatherRoot.conditionIcon(weatherRoot.heroCode, weatherRoot.heroDay, weatherRoot.heroCloud)
                                                 : "weather-none-available"
                         }
                         AnimatedImage {
@@ -1706,7 +1709,7 @@ Item {
                             visible: modelData !== null && cx > -width && cx < gcol.width + width
                             x: cx - width / 2
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData ? new Date(modelData.time).toLocaleTimeString(Qt.locale(), "h AP") : ""
+                            text: modelData ? new Date(modelData.time).toLocaleTimeString(Qt.locale(), weatherRoot && weatherRoot.use24Hour ? "H:mm" : "h AP") : ""
                             font.pixelSize: weatherRoot ? weatherRoot.simpleHourFontSize : 11
                         }
                     }

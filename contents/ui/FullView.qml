@@ -112,7 +112,7 @@ Item {
     // or off (frozen frame 0 when off — see `playing` below). Static SVG only for
     // conditions heroAnim has no WebP for. Keeps the hero consistent with the cards.
     readonly property string _heroAnim: (weatherRoot)
-        ? weatherRoot.heroAnim(weatherRoot.weatherCode, weatherRoot.isDay, weatherRoot.cloudCover) : ""
+        ? weatherRoot.heroAnim(weatherRoot.heroCode, weatherRoot.heroDay, weatherRoot.heroCloud) : ""
 
     // bumping this re-deals the hourly cards (entrance animation). Fires on
     // creation, on every popup open, and on becoming visible again — the view is
@@ -239,7 +239,7 @@ Item {
             Item {
                 // hero size, shrunk for the visually-heavy clear-night moon
                 readonly property int heroSz: Math.round((weatherRoot ? weatherRoot.heroIconSize : 96)
-                    * (weatherRoot ? weatherRoot.heroScale(weatherRoot.weatherCode, weatherRoot.isDay) : 1))
+                    * (weatherRoot ? weatherRoot.heroScale(weatherRoot.heroCode, weatherRoot.heroDay) : 1))
                 Layout.preferredWidth:  heroSz
                 Layout.preferredHeight: heroSz
                 Layout.alignment: Qt.AlignVCenter
@@ -250,11 +250,11 @@ Item {
                 // to match the animated icons' baked-in 1.45× crop (see staticIconZoom)
                 Kirigami.Icon {
                     anchors.centerIn: parent
-                    width: Math.round(parent.width * (weatherRoot ? weatherRoot.staticIconZoom(weatherRoot.weatherCode, weatherRoot.isDay) : 1))
+                    width: Math.round(parent.width * (weatherRoot ? weatherRoot.staticIconZoom(weatherRoot.heroCode, weatherRoot.heroDay) : 1))
                     height: width
                     roundToIconSize: false   // honor the exact zoom; don't snap to 32/48
                     visible: full._heroAnim.length === 0
-                    source: weatherRoot ? weatherRoot.conditionIcon(weatherRoot.weatherCode, weatherRoot.isDay, weatherRoot.cloudCover)
+                    source: weatherRoot ? weatherRoot.conditionIcon(weatherRoot.heroCode, weatherRoot.heroDay, weatherRoot.heroCloud)
                                         : "weather-none-available"
                 }
                 // animated hero (GIF/WebP) otherwise
@@ -336,7 +336,7 @@ Item {
                 Label {
                     Layout.alignment: Qt.AlignRight
                     horizontalAlignment: Text.AlignRight
-                    text: weatherRoot ? weatherRoot.conditionText(weatherRoot.weatherCode, weatherRoot.isDay) : ""
+                    text: weatherRoot ? weatherRoot.conditionText(weatherRoot.heroCode, weatherRoot.heroDay) : ""
                     font.bold: true
                     font.pixelSize: weatherRoot ? weatherRoot.conditionFontSize : 26
                 }

@@ -18,6 +18,8 @@ Kirigami.FormLayout {
     property alias  cfg_refreshInterval: refreshSpin.value
     property alias  cfg_showAlerts: alertsCheck.checked
     property int    cfg_minAlertSeverity
+    property string cfg_windUnit
+    property alias  cfg_use24Hour: timeFormatCheck.checked
 
     // breathing room so the settings don't sit flush against the top
     Item { implicitHeight: Kirigami.Units.gridUnit }
@@ -33,7 +35,7 @@ Kirigami.FormLayout {
         Kirigami.FormData.label: i18n("Weather alerts:")
         CheckBox {
             id: alertsCheck
-            text: i18n("Show severe-weather alerts")
+            text: i18n("Show weather alerts")
         }
         Kirigami.Icon {
             source: "dialog-information"
@@ -42,7 +44,7 @@ Kirigami.FormLayout {
             opacity: alertInfoHov.hovered ? 1.0 : 0.7
             HoverHandler { id: alertInfoHov }
             ToolTip.visible: alertInfoHov.hovered
-            ToolTip.text: i18n("Weather alerts come from the KDE Public Alert Server, not from government servers directly. Agencies like the NWS publish their official warnings as open CAP feeds. KDE's open-source server continuously aggregates hundreds of those feeds worldwide into one place, and the widget just asks for it. So you get the official alerts without contacting or revealing yourself to every agency that issues them.")
+            ToolTip.text: i18n("Weather alerts come from KDE Public Alert Server. It collects official severe weather warnings from agencies around the world so you get worldwide alerts without contacting, or exposing yourself to each individual agency.")
         }
     }
     ConfigComboBox {
@@ -76,5 +78,26 @@ Kirigami.FormLayout {
                 if (model[i].value === page.cfg_temperatureUnit) { currentIndex = i; break; }
         }
         onActivated: { page.cfg_temperatureUnit = model[currentIndex].value; page.cfg_unitConfigured = true; }
+    }
+    ConfigComboBox {
+        id: windUnitCombo
+        Kirigami.FormData.label: i18n("Wind speed unit:")
+        textRole: "text"
+        model: [
+            { text: i18n("Follow temperature unit"), value: "auto" },
+            { text: i18n("Kilometers per hour (km/h)"), value: "kmh" },
+            { text: i18n("Miles per hour (mph)"),       value: "mph" },
+            { text: i18n("Meters per second (m/s)"),    value: "ms"  }
+        ]
+        Component.onCompleted: {
+            for (var i = 0; i < model.length; ++i)
+                if (model[i].value === page.cfg_windUnit) { currentIndex = i; break; }
+        }
+        onActivated: page.cfg_windUnit = model[currentIndex].value
+    }
+    CheckBox {
+        id: timeFormatCheck
+        Kirigami.FormData.label: i18n("Clock format:")
+        text: i18n("Use 24-hour time")
     }
 }

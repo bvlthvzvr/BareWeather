@@ -64,6 +64,8 @@ Item {
     property alias cfg_panelColorIcon:     panelColorCheck.checked
     property alias cfg_panelDetailed:      panelDetailedCheck.checked
     property alias cfg_panelSecondLine:    panelSecondLineCombo.currentIndex
+    property alias cfg_panelConditionPercent:  panelConditionSpin.value
+    property alias cfg_panelSecondLinePercent: panelSecondLineSpin.value
 
     // shared options for the header-metric dropdowns (id ↔ label)
     readonly property var metricOptions: [
@@ -621,6 +623,22 @@ Item {
                             i18n("Precipitation (chance / amount)"),
                             i18n("Wind (speed / gust)")
                         ]
+                    }
+                    ConfigSpinBox {
+                        id: panelConditionSpin
+                        enabled: panelDetailedCheck.checked
+                        Kirigami.FormData.label: i18n("Condition font:")
+                        from: 15
+                        to: 70
+                        stepSize: 2
+                    }
+                    ConfigSpinBox {
+                        id: panelSecondLineSpin
+                        enabled: panelDetailedCheck.checked
+                        Kirigami.FormData.label: i18n("Second line font:")
+                        from: 15
+                        to: 70
+                        stepSize: 2
                     }
                 }
             }
