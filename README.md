@@ -70,6 +70,8 @@ Grateful for everyone helping the widget speak your language! Thank you!
 
 🇩🇪 German - [AbeGasame](https://github.com/AbeGasame)
 
+🇺🇦 Ukrain - [yigorsm](https://github.com/yigorsm)
+
 ## Install
 
 ### KDE Store
