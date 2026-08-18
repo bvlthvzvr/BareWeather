@@ -3,7 +3,7 @@
  * manual entry (Open-Meteo geocoding), and saved locations. No map picker /
  * QtLocation: it would fetch OSM map tiles, leaking your area of interest to the
  * tile server — the name search and auto-detect cover the use case privately.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

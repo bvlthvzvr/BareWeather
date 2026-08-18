@@ -1,6 +1,6 @@
 /*
  * Compact (panel/tray) representation — white icon + temperature.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Layouts

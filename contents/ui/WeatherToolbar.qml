@@ -1,7 +1,7 @@
 /*
  * The three header toolbar buttons (switch layout / pin / refresh) shared by
  * FullView and SimpleView. Floated at the top-right corner of each view.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

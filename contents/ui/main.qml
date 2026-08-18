@@ -1,7 +1,7 @@
 /*
  * Weather — a simple weather widget for KDE Plasma 6
  * Copyright 2026  bvlthvzvr
- * SPDX-License-Identifier: MIT
+ * SPDX-License-Identifier: GPL-2.0-or-later
  *
  * Original work. Weather data from Open-Meteo (https://open-meteo.com),
  * a free, no-key public API.

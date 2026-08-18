@@ -2,7 +2,7 @@
  * Severe-weather alert indicator — a small severity-coloured warning mark shown
  * beside the header metrics when the alert feed has an active alert. Hover shows
  * the full alert headline + description.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

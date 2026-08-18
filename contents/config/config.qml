@@ -1,6 +1,6 @@
 /*
  * Config categories.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import org.kde.plasma.configuration

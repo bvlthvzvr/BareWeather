@@ -99,4 +99,4 @@ Right click your panel or desktop -> **Add Widgets…** -> **Get New Widgets** -
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+GPL-2.0-or-later — see [LICENSE](LICENSE).

@@ -12,7 +12,7 @@
  * Inherits ComboBox, so `model`, `textRole`, `currentIndex`, `onActivated`, etc.
  * (and any cfg_* binding) work unchanged; each call site keeps its own value
  * wiring and just drops the two repeated lines.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

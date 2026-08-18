@@ -8,7 +8,7 @@
  * timeline density (hourly / every-2h) and window width. Free drag/scroll slides;
  * tapping a day pill cross-fades the curve to that day (`dayMorphT`). Ported from
  * the MorphCurve design (quadratic ease-in-out tween).
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

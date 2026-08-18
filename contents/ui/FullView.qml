@@ -2,7 +2,7 @@
  * Full (popup) representation — header, daily tabs, and a continuous
  * scrollable/draggable hourly timeline with day-break dividers. Scrolling the
  * timeline highlights the matching day tab; clicking a tab scrolls to that day.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

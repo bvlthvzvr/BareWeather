@@ -2,7 +2,7 @@
  * General settings — units and refresh.
  * (Location → configLocation.qml; forecast days, graph detail and the per-layout
  *  header-info pickers → configAppearance.qml, inside the layout tabs.)
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

@@ -4,7 +4,7 @@
  * SimpleView share the same size + flat + dot look — that lives here; each call
  * site keeps its own onClicked / onToggled / checkable / enabled / ToolTip wiring.
  * Inherits ToolButton, so all those properties work unchanged.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

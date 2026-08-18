@@ -1,7 +1,7 @@
 /*
  * Appearance settings — a shared icon-pack picker above per-layout tabs
  * (Detailed / Simple / Panel), each holding only that layout's own settings.
- * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: MIT
+ * Copyright 2026  bvlthvzvr — SPDX-License-Identifier: GPL-2.0-or-later
  */
 import QtQuick
 import QtQuick.Controls

@@ -6,7 +6,7 @@
     "Description": "A simple, interactive weather widget. For KDE Plasma",
     "Icon": "weather-clear-night",
     "Category": "Environment and Weather",
-    "License": "MIT",
+    "License": "GPL-2.0-or-later",
     "Authors": [
       {
         "Name": "bvlthvzvr"

@@ -21,7 +21,7 @@ sed -n '/^msgid ""/,$p' po/weather.pot > $tmp
 begin
     printf '%s\n' \
         "# Bare Weather — KDE Plasma weather widget." \
-        "# Translation template, under the same MIT license as the widget." \
+        "# Translation template, under the same GPL-2.0-or-later license as the widget." \
         "#" \
         "# ==========================================================================" \
         "# HOW TO ADD A TRANSLATION (no coding required):" \
