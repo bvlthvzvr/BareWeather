@@ -8,6 +8,11 @@ xgettext --from-code=UTF-8 --language=JavaScript \
   --msgid-bugs-address="https://github.com/bvlthvzvr/BareWeather/issues" \
   -o po/weather.pot (find contents -name '*.qml')
 
+# xgettext flags "Updated %1d ago" as javascript-format (because 'd' is a printf
+# conversion char), but our placeholders are Qt %1 substitution, not printf. The
+# bogus flag makes msgfmt reject valid translations like "%1 днів". Strip it.
+sed -i '/^#, javascript-format$/d' po/weather.pot
+
 # xgettext rewrites the top comment block ("# SOME DESCRIPTIVE TITLE...") every run,
 # so re-inject the translator how-to here. Keep everything from the header entry
 # (msgid "") onward; replace only the leading comment lines above it.
@@ -21,11 +26,11 @@ begin
         "# ==========================================================================" \
         "# HOW TO ADD A TRANSLATION (no coding required):" \
         "#   1. Change the file name to <lang>.po  — e.g. es.po (Spanish), fr.po (French)." \
-        "#   2. Open it in a PO editor (Lokalize, Poedit) or any text editor." \
+        "#   2. Open it in any text editor." \
         "#   3. For each entry, put your translation inside the empty msgstr \"\":" \
         "#        msgid  = original English — DO NOT edit it" \
         "#        msgstr = your translation goes here" \
-        "#   4. Send it back (pull request or issue) — it ships in the next release." \
+        "#   4. Send it back (pull request or issue) — will ships in the next release." \
         "#" \
         "# NOTES:" \
         "#   - Placeholders like %1, %2 must also appear in your translation." \
