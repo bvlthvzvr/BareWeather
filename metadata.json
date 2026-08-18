@@ -3,7 +3,7 @@
   "KPlugin": {
     "Id": "org.bvlthvzvr.weather",
     "Name": "Bare Weather",
-    "Description": "A simple, interactive weather widget that minds its own business. For KDE Plasma",
+    "Description": "A simple, interactive weather widget. For KDE Plasma",
     "Icon": "weather-clear-night",
     "Category": "Environment and Weather",
     "License": "MIT",

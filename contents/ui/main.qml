@@ -17,7 +17,6 @@ import org.kde.kirigami as Kirigami
 PlasmoidItem {
     id: root
 
-    // keep the popup open when pinned
     readonly property bool keepOpen: Plasmoid.configuration.keepOpen || false
     function setKeepOpen(v) { Plasmoid.configuration.keepOpen = v; }
     function toggleLayout() { Plasmoid.configuration.simpleLayout = !simpleLayout; }
@@ -36,7 +35,7 @@ PlasmoidItem {
     // ── Live weather state ────────────────────────────────────────────────
     property real temperature: NaN
     property int  weatherCode: -1
-    property real cloudCover: NaN     // current cloud cover %, drives the overcast-snow icon
+    property real cloudCover: NaN     // %, drives the overcast-snow icon
     property bool loading: false
 
     readonly property string locationName: Plasmoid.configuration.locationName || "—"
@@ -88,7 +87,7 @@ PlasmoidItem {
     readonly property int    panelConditionPercent:  Plasmoid.configuration.panelConditionPercent  || 40
     readonly property int    panelSecondLinePercent: Plasmoid.configuration.panelSecondLinePercent || 37
 
-    // Wind speed unit. "auto" follows the temperature unit (mph with °F, km/h
+    // Wind speed unit. "auto" follows the temperature unit (mph with °F, kmh
     // with °C) — what the widget always did; "kmh"/"mph"/"ms" pin it instead.
     // windUnitApi goes straight into the Open-Meteo query, windUnitLabel is
     // what the UI prints.
@@ -96,7 +95,7 @@ PlasmoidItem {
     readonly property string windUnitApi: (windUnit !== "auto") ? windUnit
                                         : (units === "fahrenheit" ? "mph" : "kmh")
     readonly property string windUnitLabel: (windUnitApi === "mph") ? "mph"
-                                          : (windUnitApi === "ms")  ? "m/s" : "km/h"
+                                          : (windUnitApi === "ms")  ? "m/s" : "kmh"
 
     property real apparentTemp: NaN
     property real humidity:     NaN
@@ -167,7 +166,7 @@ PlasmoidItem {
         }
         return true;
     })
-    // the most severe currently-active alert (drives the header banner)
+    // drives the header banner
     readonly property var topAlert: {
         if (!displayAlerts.length) return null;
         var best = displayAlerts[0];
@@ -221,7 +220,6 @@ PlasmoidItem {
     readonly property int simpleHeaderInfoFontSize: Plasmoid.configuration.simpleHeaderInfoFontSize || 12
     // Simple-layout graph hour-axis label font (the "6 PM 7 PM …" row)
     readonly property int simpleHourFontSize: Plasmoid.configuration.simpleHourFontSize || 13
-    // clock format toggle: true = 24-hour ("21"), false = 12-hour ("9PM")
     readonly property bool use24Hour: Plasmoid.configuration.use24Hour
     // Simple-layout graph per-point temperature label font (the "41° 40° …");
     // decoupled from the Detailed cards' hourlyTempFontSize.
@@ -419,8 +417,6 @@ PlasmoidItem {
                 "<font color=\"" + uvColor(uv) + "\">" + uvIndexText(uv) + "</font>");
         }
         if (id === "precipRate") {
-            // follow the focused graph hour (its mm that hour) when available, else
-            // current conditions — same sync as feelsLike/humidity/uv/wind above
             var pr = (hourSample && !isNaN(hourSample.precipAmt)) ? hourSample.precipAmt : precipRate;
             return isNaN(pr) ? "" : i18n("Precipitation: %1",
                 "<font color=\"" + precipColor + "\">" + precipUnitStr(pr, true) + "</font>");
@@ -467,7 +463,7 @@ PlasmoidItem {
         return "";
     }
     readonly property string precipColor: "#42a5f5"
-    readonly property string sunColor:    "#ffb74d"   // warm tint for sunrise/sunset times
+    readonly property string sunColor:    "#ffb74d"
     property int  isDay:        1
     property var  dailyData:    []   // [{ date, code, hi, lo }] — up to 7 days
     property var  allHourly:    []   // [{ time, date, temp, code, day, precip }] — all hours
@@ -486,7 +482,7 @@ PlasmoidItem {
         return d.toLocaleTimeString(Qt.locale(), "h:mm AP").replace(/\s*AM/, "a").replace(/\s*PM/, "p");
     }
 
-    // Wind speed → "6.0 mph" / "12.3 km/h" / "3.4 m/s" (see windUnit).
+    // Wind speed → "6.0 mph" / "12.3 kmh" / "3.4 m/s" (see windUnit).
     function windLabel(speed) {
         if (isNaN(speed)) return "";
         return (Math.round(speed * 10) / 10) + " " + windUnitLabel;
@@ -501,14 +497,15 @@ PlasmoidItem {
         return glyphs[Math.floor(((deg + 11.25) % 360) / 22.5) % 16];
     }
 
-    // Day label for a daily index: index 0 is always "Today" — Open-Meteo returns
+    // Day label for a daily index: index 0 is "Today" — Open-Meteo returns
     // days in the LOCATION's timezone, so day 0 is the location's current day (which
     // may differ from the viewer's calendar day if the location is in another tz).
     // "Today" stays in the fixed first slot; the midnight refresh re-rolls the array
     // so a new day simply becomes day 0. Other days show the short weekday (Mon…).
-    function dayName(idx) {
-        if (idx === 0) return i18n("Today");
-        if (idx < 0 || idx >= dailyData.length) return "";
+    // Pass absolute=true to get the weekday for day 0 too (graph-layout pills).
+    function dayName(idx, absolute) {
+        if (idx < 0 || idx >= dailyData.length) return idx === 0 ? i18n("Today") : "";
+        if (idx === 0 && !absolute) return i18n("Today");
         return new Date(dailyData[idx].date + "T12:00").toLocaleDateString(Qt.locale(), "ddd");
     }
     function dayIndexForDate(date) {
@@ -618,7 +615,7 @@ PlasmoidItem {
 
     // ── Data fetch (Open-Meteo current weather) ───────────────────────────
     function fetchWeather() {
-        if (!root.hasLocation) { root.loading = false; return; }   // no location yet → don't fetch
+        if (!root.hasLocation) { root.loading = false; return; }
         var lat = Plasmoid.configuration.latitude;
         var lon = Plasmoid.configuration.longitude;
         if (lat === undefined || lon === undefined || isNaN(lat) || isNaN(lon))
@@ -652,6 +649,7 @@ PlasmoidItem {
             if (done) return;
             done = true;
             root.loading = false;
+            loadingWatchdog.stop();
             console.log("Weather:", why);   // probe re-fires on its own timer
         }
         xhr.timeout = 8000;
@@ -664,6 +662,8 @@ PlasmoidItem {
             }
             done = true;
             root.loading = false;
+            loadingWatchdog.stop();
+            root._probeUntilOk = false;   // a resume-armed retry has landed
             try {
                 var data = JSON.parse(xhr.responseText);
                 root.utcOffsetSeconds = (data.utc_offset_seconds !== undefined) ? data.utc_offset_seconds : NaN;
@@ -726,7 +726,7 @@ PlasmoidItem {
                         });
                     root.allHourly = harr;
                 }
-                root.lastGoodFetch = Date.now();   // stamp success → clears the stale dot
+                root.lastGoodFetch = Date.now();   // stamp success → clears the stale marker
                 // good data — weatherCode is now ≥ 0, so the boot probe stops
             } catch (e) {
                 console.log("Weather: parse error", e);   // probe keeps retrying while weatherCode < 0
@@ -734,6 +734,7 @@ PlasmoidItem {
         };
         xhr.open("GET", url);
         xhr.send();
+        loadingWatchdog.restart();   // see the watchdog — this request may never call back
     }
 
     // ── Severe-weather alerts (KDE FOSS Public Alert Server) ──────────────
@@ -929,11 +930,6 @@ PlasmoidItem {
     }
     function precipAwareCode(code, precip, precipAmt, snow, temp) {
         var snowing = !isNaN(snow) && snow >= snowIconThreshold;
-        // Sub-freezing air can't produce liquid rain/drizzle, yet Open-Meteo
-        // sometimes returns a plain rain code (with ZERO snowfall) at e.g. -6 °C.
-        // Force snow when the air is at/below freezing on a plain rain/drizzle/
-        // shower code. SKIP the freezing-rain codes (56/57/66/67) — those are
-        // legit supercooled liquid and stay sleet.
         var freezing = (units === "fahrenheit") ? 32 : 0;
         // Does this hour show precip at all? Either a precip weather_code, OR a
         // clear/cloudy code that a high chance / real amount upgrades to precip
@@ -967,15 +963,14 @@ PlasmoidItem {
         // over a rain/drizzle/showers code and show snow — keeping the icon in
         // step with the snow band tint, the snow labels, and the daily total.
         if (snowing && ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)))
-            return 71;                                // → snow icon (71–77 all map to snow)
+            return 71;
         // only override a clear/cloudy code; a high CHANCE or a non-trivial
         // predicted AMOUNT both mean "show precip" (the amount catches hours where
         // Open-Meteo predicts real precip but leaves the chance/code understated).
         if (code <= 3 && ((!isNaN(precip) && precip >= rainIconThreshold)
                        || (!isNaN(precipAmt) && precipAmt >= rainAmountThreshold)))
             // if that precip is falling as snow, show snow — not rain
-            return snowing ? 71   // → snow icon (71–77 all map to snow)
-                           : 61;  // → rain icon (51–67 all map to rain)
+            return snowing ? 71 : 61;
         return code;
     }
 
@@ -997,7 +992,7 @@ PlasmoidItem {
             return night ? "wi-night-alt-sleet" : "wi-sleet";
         if (code >= 51 && code <= 67)      return night ? "wi-night-alt-rain" : "wi-rain";
         if (code >= 80 && code <= 82)      return night ? "wi-night-alt-rain" : "wi-rain";
-        // snow — continuous (71–77) or showers (85/86); overcast daytime → no-sun glyph
+        // overcast daytime snow drops the sun
         if ((code >= 71 && code <= 77) || code === 85 || code === 86)
             return night ? "wi-night-alt-snow"
                          : (isOvercastDaySnow(code, day, cloudCover) ? "wi-overcast-snow" : "wi-snow");
@@ -1058,10 +1053,8 @@ PlasmoidItem {
     // Scale the HERO down for that condition only (both layouts multiply their hero
     // size by this); everything else stays 1.0.
     function heroScale(code, day) {
-        // These factors are calibrated to the BASMILIUS artwork (its clear-night
-        // moon fills the box more than the other stems). Other packs (system
-        // theme, custom folder) have their own proportions, so render them at the
-        // plain configured size instead of leaking Basmilius-specific scaling.
+        // Other packs (system theme, custom folder) have their own proportions, so
+        // render them at the plain configured size rather than leaking these factors.
         if (iconPackId !== "basmilius") return 1.0;
         var night = (day === 0);
         if (night && (code === 0 || code === 1)) return 0.90;   // tame the heavy clear-night moon
@@ -1173,7 +1166,6 @@ PlasmoidItem {
         fetchAlerts();
     }
 
-    // Periodic refresh (interval from settings)
     Timer {
         interval: Math.max(1, root.refreshMinutes) * 60 * 1000
         running: true
@@ -1181,14 +1173,31 @@ PlasmoidItem {
         onTriggered: { root.fetchWeather(); root.fetchAlerts(); }
     }
 
-    // Staleness clock: re-evaluate weatherStale once a minute (60s granularity is
-    // plenty for a 30-min threshold). triggeredOnStart seeds _nowMs immediately.
+    // Staleness clock: 60s granularity is plenty for a 30-min threshold.
+    // It doubles as the resume-from-suspend detector. Qt timers run on the
+    // MONOTONIC clock, which is frozen while the machine sleeps, so the periodic
+    // refresh above wakes up still believing it has most of its interval left —
+    // after an 8-hour suspend the widget shows last night's weather until the
+    // remainder plays out (or the user refreshes by hand). Date.now() is the wall
+    // clock and DOES jump, so a gap far larger than our interval means we were
+    // asleep (or the clock was stepped): refetch immediately.
     Timer {
         interval: 60000
         running: true
         repeat: true
         triggeredOnStart: true
-        onTriggered: root._nowMs = Date.now()
+        onTriggered: {
+            var now = Date.now();
+            if (root._nowMs > 0 && now - root._nowMs > 150000) {   // 2+ missed ticks
+                // arm the free-running retry too: right after resume the route is
+                // usually still coming up, so this first attempt often black-holes
+                root._bootProbes = 0;
+                root._probeUntilOk = true;
+                root.fetchWeather();
+                root.fetchAlerts();
+            }
+            root._nowMs = now;
+        }
     }
 
     // Day-boundary refresh: re-fetch just after local midnight so the daily array
@@ -1231,15 +1240,31 @@ PlasmoidItem {
     // we have data (weatherCode ≥ 0) and after ~3 min hands off to periodic refresh.
     property var _wxhr: null         // current in-flight weather request (abortable)
     property int _bootProbes: 0
+    // Armed by the resume-from-suspend detector. Waking up is the boot case all over
+    // again — the wifi is still reassociating, so the refetch hits the same half-up
+    // route — except we already HAVE (stale) data, so `weatherCode < 0` is false and
+    // the probe below would never run. Without it the widget sat on pre-sleep weather
+    // until the next periodic refresh, up to 15 min later.
+    property bool _probeUntilOk: false
     Timer {
         id: bootProbe
         interval: 10000              // worst-case wait after the route is up
         repeat: true
-        running: root.weatherCode < 0 && _bootProbes < 18   // ~3 min, then leave it to periodic refresh
+        running: (root.weatherCode < 0 || root._probeUntilOk) && _bootProbes < 18   // ~3 min, then leave it to periodic refresh
         onTriggered: { _bootProbes++; root.fetchWeather(); root.fetchAlerts(); }
     }
+    // `loading` greys out the Refresh button, so anything that can leave it stuck true
+    // takes the button with it — permanently, since the user's own escape hatch is the
+    // button. A connect black-holed by a half-up route (see fetchWeather) hangs without
+    // ever calling back, and xhr.timeout doesn't reliably fire in that phase, so this
+    // clears the flag a beat after xhr.timeout should have. The request itself is left
+    // alone; the next fetch aborts it.
+    Timer {
+        id: loadingWatchdog
+        interval: 12000              // > xhr.timeout (8 s): only catches the never-called-back case
+        onTriggered: root.loading = false
+    }
 
-    // Re-fetch when the configured location / unit changes
     Connections {
         target: Plasmoid.configuration
         function onLatitudeChanged()        { root.fetchWeather(); root.weatherAlerts = []; alertsDebounce.restart(); }
@@ -1493,10 +1518,9 @@ PlasmoidItem {
         Component { id: detailComp; FullView   { weatherRoot: root } }
         Component { id: simpleComp; SimpleView { weatherRoot: root } }
 
-        // No-location empty state: out of the box there is no default city, so
-        // until the user sets one this centred notice stands in for the weather
-        // view (which is null above). hasLocation flips true when a location is
-        // chosen — in configLocation's _setLocation + the manual lat/lon fields.
+        // Out of the box there is no default city, so this stands in for the weather
+        // view (null above). hasLocation flips in configLocation's _setLocation and
+        // the manual lat/lon fields.
         Kirigami.InlineMessage {
             id: locationHint
             anchors.left: parent.left

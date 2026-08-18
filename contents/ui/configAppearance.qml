@@ -635,7 +635,7 @@ Item {
                     ConfigSpinBox {
                         id: panelSecondLineSpin
                         enabled: panelDetailedCheck.checked
-                        Kirigami.FormData.label: i18n("Second line font:")
+                        Kirigami.FormData.label: i18n("Second metric font:")
                         from: 15
                         to: 70
                         stepSize: 2

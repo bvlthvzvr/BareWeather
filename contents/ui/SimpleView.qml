@@ -358,7 +358,7 @@ Item {
             var amtShown  = !snowShown && weatherRoot && av > 0 && weatherRoot.precipAmtStr(av) !== "";
             var lines = 0;
             if (snowShown || amtShown) lines++;             // slot line
-            if (pv >= pctLabelMin || amtShown) lines++;     // chance line
+            if (pv >= pctLabelMin || amtShown) lines++;     // chance row
             if (lines > maxLines) maxLines = lines;
         }
         // ×1.2 (not the readout's full 1.4 line height): the marker's own markGap
@@ -402,6 +402,9 @@ Item {
     // holds the target state (on → in, off → out).
     readonly property int  readoutFadeDur:    150   // fade IN
     readonly property int  readoutFadeOutDur: 500   // fade OUT
+
+    // one readout line — the height of both the amount/snow slot and the chance row
+    readonly property int readoutRowH: Math.round(graphReadoutFontSize * 1.4)
 
     // y-scale tracks the interpolated values, so the vertical range eases too. One
     // pass over curTemps per frame (it re-allocates each frame) yields BOTH bounds;
@@ -1012,7 +1015,7 @@ Item {
                         Label {
                             id: pillLabel
                             anchors.centerIn: parent
-                            text: weatherRoot ? weatherRoot.dayName(pill.index) : ""
+                            text: weatherRoot ? weatherRoot.dayName(pill.index, true) : ""
                             font.bold: pill.selected
                             font.pixelSize: Kirigami.Theme.defaultFont.pixelSize + 2
                         }
@@ -1461,7 +1464,7 @@ Item {
                             Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
                                 width: Math.max(snowLbl.implicitWidth, amtLbl.implicitWidth)
-                                height: Math.round(simple.graphReadoutFontSize * 1.4)
+                                height: simple.readoutRowH
                                 Label {
                                     id: snowLbl
                                     anchors.centerIn: parent
@@ -1485,18 +1488,25 @@ Item {
                                     font.pixelSize: Math.round(simple.graphReadoutFontSize * 0.85)
                                 }
                             }
-                            Label {
-                                opacity: roGroup.pctOpacity
-                                visible: opacity > 0
-                                // disabled only during a day-pill morph: morphAnim drives
-                                // pctOpacity frame-by-frame, so the Behavior would fight it.
-                                // Enabled for flick/scroll/settle so those still fade normally.
-                                Behavior on opacity { enabled: !morphAnim.running; NumberAnimation { duration: roGroup.pctOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
+                            // chance % — the bottom readout row
+                            Item {
                                 anchors.horizontalCenter: parent.horizontalCenter
-                                text: Math.round(roGroup.pVal) + "%"
-                                color: simple.colorPrecip ? simple.precipColor : Kirigami.Theme.textColor
-                                font.bold: true
-                                font.pixelSize: simple.graphReadoutFontSize
+                                width: pctLbl.implicitWidth
+                                height: simple.readoutRowH
+                                Label {
+                                    id: pctLbl
+                                    anchors.centerIn: parent
+                                    opacity: roGroup.pctOpacity
+                                    visible: opacity > 0
+                                    // disabled only during a day-pill morph: morphAnim drives
+                                    // pctOpacity frame-by-frame, so the Behavior would fight it.
+                                    // Enabled for flick/scroll/settle so those still fade normally.
+                                    Behavior on opacity { enabled: !morphAnim.running; NumberAnimation { duration: roGroup.pctOn ? simple.readoutFadeDur : simple.readoutFadeOutDur; easing.type: Easing.InOutQuad } }
+                                    text: Math.round(roGroup.pVal) + "%"
+                                    color: simple.colorPrecip ? simple.precipColor : Kirigami.Theme.textColor
+                                    font.bold: true
+                                    font.pixelSize: simple.graphReadoutFontSize
+                                }
                             }
                         }
                     }

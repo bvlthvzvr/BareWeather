@@ -181,20 +181,7 @@ Item {
         }
     }
 
-    // Stale-data marker: a small muted dot in the top-right corner when the shown
-    // weather has aged past the threshold (weatherRoot.weatherStale) — i.e. the fetch
-    // is failing and we're showing last-known values. Absent when data is fresh.
-    Rectangle {
-        visible: weatherRoot && weatherRoot.weatherStale
-        anchors.top: parent.top
-        anchors.right: parent.right
-        width: Math.max(4, Math.round(compact.height * 0.14))
-        height: width
-        radius: width / 2
-        color: Kirigami.Theme.disabledTextColor
-        // thin contrasting ring so it reads over both the icon and the temperature
-        border.width: Math.max(1, Math.round(width * 0.18))
-        border.color: Kirigami.Theme.backgroundColor
-        opacity: 0.9
-    }
+    // No stale marker in the panel: the panel is glanced at, not read, and a dot there
+    // says something is wrong without saying what. The "Updated Xh ago" line in both
+    // popup layouts carries it instead (weatherRoot.weatherStale / staleAgeStr).
 }

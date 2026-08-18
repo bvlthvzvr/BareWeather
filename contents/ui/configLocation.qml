@@ -425,7 +425,7 @@ ScrollView {
                     opacity: detectInfoHover.hovered ? 1.0 : 0.65
                     HoverHandler { id: detectInfoHover; cursorShape: Qt.PointingHandCursor }
                     ToolTip.visible: detectInfoHover.hovered
-                    ToolTip.text: i18n("Auto-detect estimates your location from your public IP address via Mullvad, a privacy focused, no-logging service. Your IP is sent to Mullvad but never stored or profiled.")
+                    ToolTip.text: i18n("Auto-detect estimates your location from your public IP address via Mullvad, a privacy focused, no logging service. Your IP is not stored or profiled.")
                 }
                 BusyIndicator {
                     visible: page.detectBusy

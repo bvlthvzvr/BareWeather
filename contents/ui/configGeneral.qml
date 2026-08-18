@@ -44,7 +44,7 @@ Kirigami.FormLayout {
             opacity: alertInfoHov.hovered ? 1.0 : 0.7
             HoverHandler { id: alertInfoHov }
             ToolTip.visible: alertInfoHov.hovered
-            ToolTip.text: i18n("Weather alerts come from KDE Public Alert Server. It collects official severe weather warnings from agencies around the world so you get worldwide alerts without contacting, or exposing yourself to each individual agency.")
+            ToolTip.text: i18n("Weather alerts come from KDE Public Alert Server. It collects official weather warnings from agencies around the world so you get worldwide alerts without contacting, or exposing yourself to each individual agency.")
         }
     }
     ConfigComboBox {
@@ -85,7 +85,7 @@ Kirigami.FormLayout {
         textRole: "text"
         model: [
             { text: i18n("Follow temperature unit"), value: "auto" },
-            { text: i18n("Kilometers per hour (km/h)"), value: "kmh" },
+            { text: i18n("Kilometers per hour (kmh)"), value: "kmh" },
             { text: i18n("Miles per hour (mph)"),       value: "mph" },
             { text: i18n("Meters per second (m/s)"),    value: "ms"  }
         ]

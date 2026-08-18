@@ -430,7 +430,7 @@ Item {
                         spacing: Kirigami.Units.smallSpacing
                         Label {
                             Layout.alignment: Qt.AlignHCenter
-                            text: weatherRoot ? weatherRoot.dayName(dayTab.index) : ""
+                            text: weatherRoot ? weatherRoot.dayName(dayTab.index, true) : ""
                             font.pointSize: Kirigami.Theme.defaultFont.pointSize + 1
                             font.bold: dayTab.selected
                         }
