@@ -70,7 +70,7 @@ Grateful for everyone helping the widget speak your language! Thank you!
 
 🇩🇪 German - [AbeGasame](https://github.com/AbeGasame)
 
-🇺🇦 Ukrain - [yigorsm](https://github.com/yigorsm)
+🇺🇦 Ukrainian - [yigorsm](https://github.com/yigorsm)
 
 ## Install
 
@@ -88,7 +88,6 @@ Right click your panel or desktop -> **Add Widgets…** -> **Get New Widgets** -
      ```bash
      kpackagetool6 --type Plasma/Applet --install bare-weather.plasmoid
      ```
-
 
 ## Credits
 

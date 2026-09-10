@@ -420,17 +420,14 @@ msgid "Detect now"
 msgstr "Визначити зараз"
 
 #: contents/ui/configLocation.qml:428
-#, fuzzy
 msgid ""
 "Auto-detect estimates your location from your public IP address via Mullvad, "
 "a privacy focused, no logging service. Your IP is not stored or profiled."
 msgstr ""
 "Функція автоматичного визначення місцезнаходження оцінює ваше "
-"місцезнаходження на основі вашої публічної IP-адреси за допомогоюкінцевої "
-"точки геолокації Mullvad (am.i.mullvad.net — сервісу, орієнтованого на "
-"конфіденційність, що не ведежурналів. Для цього ваша IP-адреса надсилається "
-"до Mullvad, але не зберігатиметьсяі не використовуватиметься для створення "
-"профілів. Це приблизне місцезнаходження на рівні міста, а не точне."
+"місцезнаходження на основі вашої публічної IP-адреси через Mullvad, сервіс, "
+"орієнтований на конфіденційність, що не веде журналів. Ваша IP-адреса не "
+"зберігається і не використовується для створення профілів."
 
 #: contents/ui/configLocation.qml:444
 msgid "Manual"
@@ -500,6 +497,10 @@ msgid ""
 "weather warnings from agencies around the world so you get worldwide alerts "
 "without contacting, or exposing yourself to each individual agency."
 msgstr ""
+"Погодні попередження надходять із сервера KDE Public Alert Server. Він "
+"збирає офіційні попередження про погоду від служб з усього світу, тож ви "
+"отримуєте сповіщення глобального масштабу, не звертаючись до кожної окремої "
+"служби й не передаючи їй свої дані."
 
 #: contents/ui/configGeneral.qml:52
 msgid "Show alerts at or above:"
@@ -535,27 +536,27 @@ msgstr "Градуси Фаренгейта (°F)"
 
 #: contents/ui/configGeneral.qml:84
 msgid "Wind speed unit:"
-msgstr "Одиниця вимірювання швидкості вітру"
+msgstr "Одиниці вимірювання швидкості вітру:"
 
 #: contents/ui/configGeneral.qml:87
 msgid "Follow temperature unit"
-msgstr "Відповідно до одиниці температури"
+msgstr "Використовувати одиницю вимірювання температури"
 
 #: contents/ui/configGeneral.qml:88
 msgid "Kilometers per hour (kmh)"
-msgstr "Кілометри на годину (kmh)"
+msgstr "Кілометри за годину (км/год)"
 
 #: contents/ui/configGeneral.qml:89
 msgid "Miles per hour (mph)"
-msgstr "Милі на годину (mph)"
+msgstr "Милі за годину (mph)"
 
 #: contents/ui/configGeneral.qml:90
 msgid "Meters per second (m/s)"
-msgstr "Метри за секунду (m/s)"
+msgstr "Метри за секунду (м/с)"
 
 #: contents/ui/configGeneral.qml:100
 msgid "Clock format:"
-msgstr "Формат часу"
+msgstr "Формат часу:"
 
 #: contents/ui/configGeneral.qml:101
 msgid "Use 24-hour time"
