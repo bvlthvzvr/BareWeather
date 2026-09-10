@@ -72,6 +72,8 @@ Grateful for everyone helping the widget speak your language! Thank you!
 
 🇺🇦 Ukrainian - [yigorsm](https://github.com/yigorsm)
 
+🇵🇱 Polish - anonymous contributor
+
 ## Install
 
 ### KDE Store
