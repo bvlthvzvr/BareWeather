@@ -508,6 +508,17 @@ PlasmoidItem {
         if (idx === 0 && !absolute) return i18n("Today");
         return new Date(dailyData[idx].date + "T12:00").toLocaleDateString(Qt.locale(), "ddd");
     }
+    // Calendar date for a daily index, in the viewer's locale order but without the
+    // year — en_US gives "9/10", fr_FR "10/09", de_DE "10.09.". Derived from the
+    // locale's short date format with the year token (and its separators) stripped,
+    // so the day/month order follows the locale instead of being hardcoded.
+    function dailyDate(idx) {
+        if (idx < 0 || idx >= dailyData.length) return "";
+        var fmt = Qt.locale().dateFormat(Locale.ShortFormat)
+                    .replace(/^[^a-zA-Z]*y+[^a-zA-Z]*/, "")
+                    .replace(/[^a-zA-Z]*y+[^a-zA-Z]*$/, "");
+        return new Date(dailyData[idx].date + "T12:00").toLocaleDateString(Qt.locale(), fmt);
+    }
     function dayIndexForDate(date) {
         for (var i = 0; i < dailyData.length; ++i)
             if (dailyData[i].date === date) return i;
