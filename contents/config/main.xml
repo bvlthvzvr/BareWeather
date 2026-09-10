@@ -105,6 +105,9 @@
     <entry name="dailyIconSize" type="Int">
       <default>36</default>
     </entry>
+    <entry name="showDayDate" type="Bool">
+      <default>true</default>
+    </entry>
     <entry name="hourlyIconSize" type="Int">
       <default>38</default>
     </entry>

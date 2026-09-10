@@ -68,11 +68,11 @@ Translations welcome. If you'd like the widget in your language, it's roughly as
 
 Grateful for everyone helping the widget speak your language! Thank you!
 
-🇩🇪 German - [AbeGasame](https://github.com/AbeGasame)
+🇩🇪 German [Need Update](https://github.com/bvlthvzvr/BareWeather/issues/6) - [AbeGasame](https://github.com/AbeGasame)
 
 🇺🇦 Ukrainian - [yigorsm](https://github.com/yigorsm)
 
-🇵🇱 Polish - anonymous contributor
+🇵🇱 Polish - Damian
 
 ## Install
 

@@ -24,6 +24,7 @@ Item {
     property alias cfg_heroIconSize:       heroSpin.value
     property alias cfg_tempFontSize:       tempSpin.value
     property alias cfg_dailyIconSize:      dailySpin.value
+    property alias cfg_showDayDate:        dayDateCheck.checked
     property alias cfg_hourlyIconSize:     hourlySpin.value
     property alias cfg_hourlyTempFontSize: hourlyTempSpin.value
     property alias cfg_hourlyCardFontSize: hourlyCardSpin.value
@@ -223,6 +224,11 @@ Item {
                             from: 12
                             to: 64
                             stepSize: 2
+                        }
+                        CheckBox {
+                            id: dayDateCheck
+                            Kirigami.FormData.label: i18n("Day tabs:")
+                            text: i18n("Show mm/dd")
                         }
                         ConfigSpinBox {
                             id: hourlySpin

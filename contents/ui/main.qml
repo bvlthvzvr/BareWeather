@@ -67,6 +67,7 @@ PlasmoidItem {
     readonly property int    detailDayStartHour:  Plasmoid.configuration.detailDayStartHour
     readonly property int    conditionFontSize:   Plasmoid.configuration.conditionFontSize   || 28
     readonly property bool   animatedDailyIcons:  Plasmoid.configuration.animatedDailyIcons  ?? true
+    readonly property bool   showDayDate:         Plasmoid.configuration.showDayDate         ?? true
     readonly property bool   animatedHourlyIcons: Plasmoid.configuration.animatedHourlyIcons ?? true
     readonly property bool   simpleLayout:         Plasmoid.configuration.simpleLayout         || false
     readonly property int    simpleHourlyIconSize: Plasmoid.configuration.simpleHourlyIconSize || 34

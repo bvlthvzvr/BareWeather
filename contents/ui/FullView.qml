@@ -437,6 +437,7 @@ Item {
                         Label {
                             Layout.alignment: Qt.AlignHCenter
                             Layout.topMargin: -Math.round(Kirigami.Units.smallSpacing / 2)
+                            visible: weatherRoot ? weatherRoot.showDayDate : true
                             text: weatherRoot ? weatherRoot.dailyDate(dayTab.index) : ""
                             font.pointSize: Kirigami.Theme.defaultFont.pointSize - 1
                             font.bold: dayTab.index === 0   // today's date stands out; stays dimmed
