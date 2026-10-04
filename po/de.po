@@ -1,17 +1,29 @@
-# SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
-# This file is distributed under the same license as the PACKAGE package.
-# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+# Bare Weather — KDE Plasma weather widget.
+# Translation template, under the same GPL-2.0-or-later license as the widget.
 #
-#, fuzzy
+# ==========================================================================
+# HOW TO ADD A TRANSLATION (no coding required):
+#   1. Change the file name to <lang>.po  — e.g. es.po (Spanish), fr.po (French).
+#   2. Open it in a PO editor (Lokalize, Poedit) or any text editor.
+#   3. For each entry, put your translation inside the empty msgstr "":
+#        msgid  = original English — DO NOT edit it
+#        msgstr = your translation goes here
+#   4. Send it back (pull request or issue) — it ships in the next release.
+#
+# NOTES:
+#   - Placeholders like %1, %2 must also appear in your translation.
+#   - Lines starting with '#.' are hints, '#:' are source locations — ignore both.
+# ==========================================================================
+# German translation by AbeGasame <https://github.com/AbeGasame> and cheldt <https://github.com/cheldt>.
+# Corrections welcome.
 msgid ""
 msgstr ""
-"Project-Id-Version: \n"
+"Project-Id-Version: org.bvlthvzvr.weather\n"
 "Report-Msgid-Bugs-To: https://github.com/bvlthvzvr/BareWeather/issues\n"
 "POT-Creation-Date: 2026-09-10 03:31-0400\n"
-"PO-Revision-Date: 2026-06-20 19:58+0200\n"
-"Last-Translator: \n"
-"Language-Team: \n"
+"PO-Revision-Date: 2026-10-02 04:02-0400\n"
+"Last-Translator: cheldt <https://github.com/cheldt>\n"
+"Language-Team: German\n"
 "Language: de\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -39,7 +51,6 @@ msgid "Weather alerts:"
 msgstr "Wetterwarnungen:"
 
 #: contents/ui/configGeneral.qml:38
-#, fuzzy
 msgid "Show weather alerts"
 msgstr "Unwetterwarnungen anzeigen"
 
@@ -49,6 +60,10 @@ msgid ""
 "weather warnings from agencies around the world so you get worldwide alerts "
 "without contacting, or exposing yourself to each individual agency."
 msgstr ""
+"Unwetterwarnungen verschickt der KDE Server für öffentliche Warnungen (KDE "
+"Public Alert Server). Der Server sammelt weltweit öffentliche Wetter-"
+"Warnungen von Wetterdiensten ein, übernimmt dabei für dich die Kommunikation "
+"mit den Wetterdiensten und schützt deine Privatsphäre."
 
 #: contents/ui/configGeneral.qml:52
 msgid "Show alerts at or above:"
@@ -84,32 +99,31 @@ msgstr "Fahrenheit (°F)"
 
 #: contents/ui/configGeneral.qml:84
 msgid "Wind speed unit:"
-msgstr ""
+msgstr "Einheit der Windgeschwindigkeit:"
 
 #: contents/ui/configGeneral.qml:87
-#, fuzzy
 msgid "Follow temperature unit"
-msgstr "Temperature-Einheit:"
+msgstr "Der Temperatureinheit folgen"
 
 #: contents/ui/configGeneral.qml:88
 msgid "Kilometers per hour (kmh)"
-msgstr ""
+msgstr "Kilometer pro Stunde (kmh)"
 
 #: contents/ui/configGeneral.qml:89
 msgid "Miles per hour (mph)"
-msgstr ""
+msgstr "Meilen pro Stunde (mph)"
 
 #: contents/ui/configGeneral.qml:90
 msgid "Meters per second (m/s)"
-msgstr ""
+msgstr "Meter pro Sekunde (m/s)"
 
 #: contents/ui/configGeneral.qml:100
-msgid "Clock format:"
-msgstr ""
+msgid "Time format:"
+msgstr "Zeitformat:"
 
 #: contents/ui/configGeneral.qml:101
 msgid "Use 24-hour time"
-msgstr ""
+msgstr "24-Stunden-Format verwenden"
 
 #: contents/ui/configLocation.qml:122
 msgid "Searching…"
@@ -174,16 +188,13 @@ msgid "Detect now"
 msgstr "Jetzt erkennen"
 
 #: contents/ui/configLocation.qml:428
-#, fuzzy
 msgid ""
 "Auto-detect estimates your location from your public IP address via Mullvad, "
 "a privacy focused, no logging service. Your IP is not stored or profiled."
 msgstr ""
-"Auto-Detect schätzt Ihren Standort anhand Ihrer öffentlichen IP-Adresse über "
-"den Geolokalisierungsendpunkt von Mullvad (amimullvad.net — ein "
-"datenschutzorientierter Dienst ohne Protokollierung). Ihre IP wird dazu an "
-"Mullvad gesendet, aber nicht gespeichert oder profiliert. Es handelt sich um "
-"eine ungefähre Lage auf Stadtebene, nicht um eine genaue Lage."
+"Die automatische Standortbestimmung ermittelt deinen Standort anhand deiner "
+"öffentlichen IP-Adresse über Mullvad. Mullvad loggt keine Daten und deine IP-"
+"Adresse wird weder gespeichert noch zur Profilerstellung herangezogen."
 
 #: contents/ui/configLocation.qml:444
 msgid "Manual"
@@ -237,15 +248,15 @@ msgstr "Entfernen"
 
 #: contents/ui/main.qml:133
 msgid "Updated %1m ago"
-msgstr ""
+msgstr "Aktualisiert vor %1m"
 
 #: contents/ui/main.qml:135
 msgid "Updated %1h ago"
-msgstr ""
+msgstr "Aktualisiert vor %1h"
 
 #: contents/ui/main.qml:136
 msgid "Updated %1d ago"
-msgstr ""
+msgstr "Aktualisiert vor %1d"
 
 #: contents/ui/main.qml:184
 msgid "until %1"
@@ -289,7 +300,7 @@ msgstr "Wind: %1"
 
 #: contents/ui/main.qml:444
 msgid "Cloud cover: %1"
-msgstr ""
+msgstr "Bewölkung: %1"
 
 #: contents/ui/main.qml:448
 msgid "Snowfall %1: %2"
@@ -405,7 +416,7 @@ msgstr "Schneefall heute"
 
 #: contents/ui/configAppearance.qml:81 contents/ui/configAppearance.qml:108
 msgid "Cloud cover"
-msgstr ""
+msgstr "Bewölkung"
 
 #: contents/ui/configAppearance.qml:94
 msgid "Sunrise / sunset"
@@ -413,7 +424,7 @@ msgstr "Sonnenaufgang / Sonnenuntergang"
 
 #: contents/ui/configAppearance.qml:101
 msgid "Wind + gust"
-msgstr ""
+msgstr "Wind + Böen"
 
 #: contents/ui/configAppearance.qml:102
 msgid "Precip chance"
@@ -472,11 +483,11 @@ msgstr "Symbolordner auswählen"
 
 #: contents/ui/configAppearance.qml:177
 msgid "Cards"
-msgstr ""
+msgstr "Tagesvorschau"
 
 #: contents/ui/configAppearance.qml:178
 msgid "Graph"
-msgstr ""
+msgstr "Diagramm"
 
 #: contents/ui/configAppearance.qml:179
 msgid "Panel"
@@ -557,28 +568,30 @@ msgstr "Wetterelemente (bis zu 4)"
 #: contents/ui/configAppearance.qml:311
 msgid "The element header readouts follow whichever hour you hover."
 msgstr ""
+"Die Anzeige der Werte im oberen Bereich folgt den Stundenkacheln unter dem "
+"Mauszeiger."
 
 #: contents/ui/configAppearance.qml:317 contents/ui/configAppearance.qml:544
 msgid "Font:"
-msgstr ""
+msgstr "Schriftart:"
 
 #: contents/ui/configAppearance.qml:324 contents/ui/configAppearance.qml:386
 #: contents/ui/configAppearance.qml:551
 msgid "Element 1:"
-msgstr ""
+msgstr "Element 1:"
 
 #: contents/ui/configAppearance.qml:332 contents/ui/configAppearance.qml:410
 #: contents/ui/configAppearance.qml:559
 msgid "Element 2:"
-msgstr ""
+msgstr "Element 2:"
 
 #: contents/ui/configAppearance.qml:340 contents/ui/configAppearance.qml:567
 msgid "Element 3:"
-msgstr ""
+msgstr "Element 3:"
 
 #: contents/ui/configAppearance.qml:348 contents/ui/configAppearance.qml:575
 msgid "Element 4:"
-msgstr ""
+msgstr "Element 4:"
 
 #: contents/ui/configAppearance.qml:355 contents/ui/configAppearance.qml:582
 msgid "Reset to none"
@@ -593,6 +606,8 @@ msgid ""
 "Shows the main metric, or the fallback on hours the main one has nothing to "
 "show."
 msgstr ""
+"Zeigt die Hauptmetrik an, oder den Ersatzwert für Stunden, in denen die "
+"Hauptmetrik keinen Wert liefert."
 
 #: contents/ui/configAppearance.qml:394 contents/ui/configAppearance.qml:402
 #: contents/ui/configAppearance.qml:418 contents/ui/configAppearance.qml:426
@@ -624,7 +639,6 @@ msgid "Header icon"
 msgstr "Kopfzeilensymbol"
 
 #: contents/ui/configAppearance.qml:518
-#, fuzzy
 msgid "Graph Color:"
 msgstr "Diagrammfarbe:"
 
@@ -641,57 +655,48 @@ msgid "Precipitation only"
 msgstr "Nur Niederschlag"
 
 #: contents/ui/configAppearance.qml:601
-#, fuzzy
 msgid "Panel icon size:"
-msgstr "Größe des Kopfzeilensymbols:"
+msgstr "Größe des Panel-Icons:"
 
 #: contents/ui/configAppearance.qml:608
-#, fuzzy
 msgid "Panel temperature font:"
-msgstr "Diagrammtemperatur-Schriftart:"
+msgstr "Schriftart für Panel-Temperatur:"
 
 #: contents/ui/configAppearance.qml:615
 msgid "Icon color:"
 msgstr "Symbolfarbe:"
 
 #: contents/ui/configAppearance.qml:616
-#, fuzzy
 msgid "Use colored icon"
-msgstr "Verwenden eines farbigen Symbols (anstelle von Weiß)"
+msgstr "Farbiges Symbol verwenden"
 
 #: contents/ui/configAppearance.qml:620
-#, fuzzy
 msgid "Panel:"
-msgstr "Panel"
+msgstr "Panel:"
 
 #: contents/ui/configAppearance.qml:621
-#, fuzzy
 msgid "Detailed View"
-msgstr "Detailliert"
+msgstr "Detailansicht"
 
 #: contents/ui/configAppearance.qml:628
-#, fuzzy
 msgid "High / low temperature"
-msgstr "Stundenansicht Temperatur-Schriftart:"
+msgstr "Höchst- / Tiefsttemperatur"
 
 #: contents/ui/configAppearance.qml:629
-#, fuzzy
 msgid "Precipitation (chance / amount)"
-msgstr "Niederschlagsintensität"
+msgstr "Niederschlag (Wahrscheinlichkeit / Menge)"
 
 #: contents/ui/configAppearance.qml:630
 msgid "Wind (speed / gust)"
-msgstr ""
+msgstr "Wind (Geschwindigkeit / Böen)"
 
 #: contents/ui/configAppearance.qml:636
-#, fuzzy
 msgid "Condition font:"
-msgstr "Wetter- und Ort-Schriftart:"
+msgstr "Schriftart für Wetterbedingung:"
 
 #: contents/ui/configAppearance.qml:644
-#, fuzzy
 msgid "Second metric font:"
-msgstr "Wetter- und Ort-Schriftart:"
+msgstr "Schriftart für zweite Metrik:"
 
 #: contents/config/config.qml:10
 msgid "Location"
@@ -705,48 +710,18 @@ msgstr "Allgemein"
 msgid "Appearance"
 msgstr "Aussehen"
 
-#~ msgid ""
-#~ "Weather alerts come from the KDE Public Alert Server, not from government "
-#~ "servers directly. Agencies like the NWS publish their official warnings "
-#~ "as open CAP feeds. KDE's open-source server continuously aggregates "
-#~ "hundreds of those feeds worldwide into one place, and the widget just "
-#~ "asks for it. So you get the official alerts without contacting or "
-#~ "revealing yourself to every agency that issues them."
-#~ msgstr ""
-#~ "Wetterwarnungen kommen vom KDE Public Alert Server, nicht direkt von "
-#~ "Regierungsservern. Agenturen wie die NWS veröffentlichen ihre offiziellen "
-#~ "Warnungen als offene CAP-Feeds. Der Open-Source-Server von KDE fasst "
-#~ "kontinuierlich Hunderte dieser Feeds weltweit an einem Ort zusammen, und "
-#~ "das Widget fragt einfach danach. Sie erhalten also die offiziellen "
-#~ "Benachrichtigungen, ohne jede Agentur, die sie herausgibt, zu "
-#~ "kontaktieren oder sich ihr zu offenbaren."
+#: contents/ui/configGeneral.qml:106
+msgid "Layouts:"
+msgstr ""
 
-#~ msgid "Detected: %1°, %2°"
-#~ msgstr "Erkannt: %1°, %2°"
+#: contents/ui/configGeneral.qml:109
+msgid "Keep both layouts ready"
+msgstr ""
 
-#~ msgid "Use"
-#~ msgstr "Verwenden"
-
-#~ msgid "…and %1 more"
-#~ msgstr "...und %1 weitere"
-
-#~ msgid "Line 1:"
-#~ msgstr "Zeile 1:"
-
-#~ msgid "Line 2:"
-#~ msgstr "Zeile 2:"
-
-#~ msgid "Line 3:"
-#~ msgstr "Zeile 3:"
-
-#~ msgid "Line 4:"
-#~ msgstr "Zeile 4:"
-
-#~ msgid "Panel icon size (% of height):"
-#~ msgstr "Panel-Icon-Größe (% der Höhe):"
-
-#~ msgid "Panel temperature font (% of height):"
-#~ msgstr "Panel-Temperatur-Schriftart (% der Höhe):"
-
-#~ msgid "Simple"
-#~ msgstr "Einfach"
+#: contents/ui/configGeneral.qml:118
+msgid ""
+"On: The button in the widget switches between the layout instantly.\n"
+"\n"
+"Off: Only the layout you pick is loaded (saves memory), the switch button is "
+"hidden."
+msgstr ""

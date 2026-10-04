@@ -116,8 +116,8 @@ msgid "Meters per second (m/s)"
 msgstr "Metry na sekundę (m/s)"
 
 #: contents/ui/configGeneral.qml:100
-msgid "Clock format:"
-msgstr "Format zegara:"
+msgid "Time format:"
+msgstr "Format czasu:"
 
 #: contents/ui/configGeneral.qml:101
 msgid "Use 24-hour time"
@@ -705,3 +705,19 @@ msgstr "Ogólne"
 #: contents/config/config.qml:20
 msgid "Appearance"
 msgstr "Wygląd"
+
+#: contents/ui/configGeneral.qml:106
+msgid "Layouts:"
+msgstr ""
+
+#: contents/ui/configGeneral.qml:109
+msgid "Keep both layouts ready"
+msgstr ""
+
+#: contents/ui/configGeneral.qml:118
+msgid ""
+"On: The button in the widget switches between the layout instantly.\n"
+"\n"
+"Off: Only the layout you pick is loaded (saves memory), the switch button is "
+"hidden."
+msgstr ""
